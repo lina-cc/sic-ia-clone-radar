@@ -13,6 +13,8 @@ Este repositorio contiene la investigación, documentación y prototipo experime
 ```plaintext
 sic-ia-clone-radar/
 ├── Documentos/
+│   ├── Clase 9/                   # Hoja de trabajo y actividades Capstone.
+│   ├── Proyecto Final/            # Guías oficiales, pautas y rúbricas SIC 2026.
 │   ├── Informe mirror.docx        # Documento del proyecto: antecedentes, problemática y técnicas.
 │   └── pitch_5_minutos.md         # Guion estructurado del pitch oral.
 ├── Primera fase práctica/
@@ -22,6 +24,7 @@ sic-ia-clone-radar/
 │   ├── README.md                  # Instrucciones específicas de ejecución del prototipo.
 │   ├── requirements.txt           # Dependencias para pip.
 │   └── environment.yml            # Configuración de entorno Conda.
+├── FairPlay_AI_DBSCAN.ipynb        # Notebook experimental: TF-IDF vs. multimodal con DBSCAN.
 └── .gitignore
 ```
 
@@ -55,6 +58,14 @@ pip install -r "Primera fase práctica/requirements.txt"
 cd "Primera fase práctica"
 python app.py
 ```
+
+---
+
+## 🧪 Experimentación Multimodal con DBSCAN (`FairPlay_AI_DBSCAN.ipynb`)
+
+El repositorio incluye un notebook experimental que evalúa cuantitativamente la hipótesis central del proyecto sobre un dataset controlado con clones de *Escape the Walls*, *Farm Tycoon*, *Racing Legends* y juegos señuelo del mismo género:
+* **Línea Base (TF-IDF + DBSCAN):** Alcanza un $F_1 = 0.636$ y precisión de $47.9\%$ debido a falsos positivos entre juegos que comparten vocabulario de género sin ser réplicas.
+* **Modelo Base Multimodal (Texto + Imagen + DBSCAN):** Al combinar distancias léxicas con embeddings visuales de CNN, la precisión se eleva al **$100\%$** con un $F_1 = 0.912$ y $ARI = 0.883$, aislando los clones reales de los señuelos independientes.
 
 ---
 
