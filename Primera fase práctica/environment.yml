@@ -1,0 +1,12 @@
+name: similitud-juegos
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pandas
+  - pyarrow
+  - scikit-learn
+  - joblib
+  - pip
+  - pip:
+      - gradio
