@@ -173,7 +173,9 @@ Opciones útiles de la configuración:
 | `N_CAPTURAS` | Más capturas = mejor detección de assets reutilizados, pero más descargas. |
 | `MAX_JUEGOS` | Sin GPU, bajarlo a ~20000. |
 
-Lo que ya se calculó queda guardado en `MyDrive/fairplay/salidas/` (embeddings, vecinos, imágenes procesadas) y **no se recalcula** en la siguiente corrida mientras el catálogo no cambie. Por eso la primera corrida es la lenta (descarga del dataset, embeddings e imágenes) y las siguientes son mucho más rápidas.
+Lo que ya se calculó queda guardado en `MyDrive/fairplay/salidas/` (catálogo de Kaggle reducido, embeddings, vecinos, imágenes procesadas) y **no se recalcula** en la siguiente corrida mientras el catálogo no cambie. Por eso la primera corrida es la lenta (descarga del dataset, embeddings e imágenes) y las siguientes son mucho más rápidas.
+
+**Si Colab dice que se acabó la RAM:** *Entorno de ejecución → Reiniciar sesión* y volver a *Ejecutar todo*. No relances *Ejecutar todo* sobre una sesión que ya corrió el notebook: los datos viejos siguen en memoria y se duplican.
 
 ### App en local
 
