@@ -19,7 +19,9 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `FairPlay_AI_Clasificador_Pares.ipynb` | **Notebook principal.** Datos reales de Steam, señales por par, modelo entrenado y evaluado. |
 | `FairPlay_AI_DBSCAN.ipynb` | Primer experimento con datos simulados (agrupamiento con DBSCAN). Se conserva como antecedente. |
 | `Primera fase práctica/similitud.py` | Lógica de la línea base TF-IDF (sin interfaz). |
-| `Primera fase práctica/app.py` | App web en Gradio: buscar similares, comparar dos juegos, texto nuevo y guardar casos etiquetados. |
+| `Primera fase práctica/senales.py` | Calcula las señales de un par de juegos, igual que el notebook, para que la app pueda usar el modelo. |
+| `Primera fase práctica/modelo.py` | Carga el modelo entrenado (exportado por el notebook), busca candidatos y explica pares. |
+| `Primera fase práctica/app.py` | App web en Gradio: línea base TF-IDF (buscar, comparar, texto nuevo), pestaña **Modelo entrenado** y registro de casos etiquetados. |
 | `Primera fase práctica/requirements.txt` | Dependencias de la app, con versiones fijas. |
 | `tests/` | Tests automáticos de `similitud.py` y `app.py`. |
 | `.github/workflows/tests.yml` | Corre los tests en GitHub en cada push. |
@@ -28,7 +30,7 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `docs/` | Esta guía. |
 | `Documentos/` | Informe, pitch y hoja de trabajo del equipo. |
 
-Carpetas que **no** se suben a GitHub (están en `.gitignore`): `data/` (datos de Steam), `casos/` (etiquetas del equipo) y los archivos de caché `*.joblib` / `*.parquet`.
+Carpetas que **no** se suben a GitHub (están en `.gitignore`): `data/` (datos de Steam), `casos/` (etiquetas del equipo), `modelo/` (el modelo exportado, que incluye el catálogo), los archivos de caché `*.joblib` / `*.parquet` y el material del curso con derechos reservados (`Documentos/Proyecto Final/`).
 
 ---
 
@@ -125,7 +127,23 @@ Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se
 * **Validación cruzada por grupos (`GroupKFold`).** Los juegos de una misma "familia" de clones quedan todos en el mismo grupo. Así el modelo nunca se evalúa con un clon cuya familia ya vio al entrenar.
 * **La evaluación que vale para el informe es la de las etiquetas humanas** (sección 7 del notebook), comparada con la **línea base**: usar solo `tfidf_cos`, que es lo que hace la app hoy.
 
-### 6.5 Las métricas
+### 6.5 Cómo llega el modelo a la app
+
+El notebook hace el trabajo pesado (embeddings de texto con un modelo de lenguaje, descarga de imágenes y CLIP) y al final **exporta un paquete** con todo ya calculado. La app solo carga ese paquete, así que corre en cualquier computador o en Hugging Face Spaces gratis, sin GPU.
+
+```mermaid
+flowchart LR
+    N[Notebook en Colab<br/>GPU, CLIP, embeddings] -->|sección 11| P[Paquete<br/>modelo_pares.joblib<br/>catalogo.parquet<br/>emb_texto.npy<br/>imagenes.joblib]
+    P --> M[modelo.py<br/>carga y busca candidatos]
+    S[senales.py<br/>mismas señales que el notebook] --> M
+    M --> A[app.py<br/>pestaña Modelo entrenado]
+```
+
+**Regla importante:** las señales se calculan en dos lugares (el notebook y `senales.py`). Deben hacerlo exactamente igual, porque el modelo aprendió con los números del notebook. Si se cambia el cálculo de una señal, hay que cambiarla en ambos lados y volver a entrenar. Los tests de `tests/test_senales.py` fijan el comportamiento esperado.
+
+**Limitación:** la app solo busca juegos que estén en el catálogo del paquete. Para un juego nuevo hay que agregarlo al catálogo y volver a exportar desde el notebook.
+
+### 6.6 Las métricas
 
 | Métrica | Qué significa | Por qué se usa |
 |---|---|---|
@@ -164,6 +182,13 @@ python app.py
 
 Necesita el parquet en `Primera fase práctica/data/juegos_texto_en.parquet`.
 
+Para activar la pestaña **Modelo entrenado**, copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En esa pestaña:
+
+1. Se escribe el título de un juego del catálogo y se pulsa *Buscar candidatos*.
+2. La tabla muestra los candidatos ordenados por **probabilidad de revisar** y el valor de cada señal; la galería muestra sus imágenes de Steam.
+3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
+4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.
+
 ### Tests
 
 ```bash
@@ -179,14 +204,14 @@ Deben pasar todos. En GitHub se corren solos en cada push (pestaña **Actions**)
 
 Así la demo tiene un enlace permanente, sin depender de que alguien tenga su computador encendido.
 
-1. **Subir los datos a un dataset privado.** En huggingface.co: *New → Dataset*, marcarlo **privado**, y subir `juegos_texto_en.parquet`.
+1. **Subir los datos a un dataset privado.** En huggingface.co: *New → Dataset*, marcarlo **privado**, y subir `juegos_texto_en.parquet`. Para la pestaña del modelo, subir también los cuatro archivos de `salidas/paquete_app` dentro de una carpeta `modelo/` del dataset.
 2. **Crear un token de lectura.** *Settings → Access Tokens → New token* (tipo *Read*).
 3. **Crear el Space.** *New → Space*, SDK **Gradio**.
-4. **Subir al Space** los archivos `app.py`, `similitud.py` y `requirements.txt` de `Primera fase práctica/`.
+4. **Subir al Space** los archivos `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt` de `Primera fase práctica/`.
 5. **Configurar el Space** en *Settings → Variables and secrets*:
    * Variable `FAIRPLAY_HF_DATASET` = `usuario/nombre-del-dataset`
    * Secreto `HF_TOKEN` = el token del paso 2
-6. El Space instala las dependencias y arranca. La app descarga el parquet al iniciar (función `resolver_datos` en `app.py`).
+6. El Space instala las dependencias y arranca. La app descarga el parquet y el modelo al iniciar (funciones `resolver_datos` y `cargar_modelo` en `app.py`).
 
 **Ojo:** en Spaces gratuitos el disco se borra al reiniciar, así que los casos guardados en la app se pierden. Para etiquetar, usen la app en local o descarguen el CSV antes de reiniciar.
 

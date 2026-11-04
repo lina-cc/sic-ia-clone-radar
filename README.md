@@ -20,6 +20,8 @@ sic-ia-clone-radar/
 ├── FairPlay_AI_DBSCAN.ipynb              # Primer experimento con datos simulados (antecedente).
 ├── Primera fase práctica/
 │   ├── app.py                            # App web en Gradio (también desplegable en Hugging Face Spaces).
+│   ├── modelo.py                         # Usa el modelo entrenado: candidatos y explicación de pares.
+│   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Lógica de la línea base TF-IDF + similitud coseno.
 │   ├── LEEME_PROBADORES.md               # Guía para quienes prueban la app.
 │   ├── README.md                         # Instrucciones de la app.
@@ -54,12 +56,17 @@ Responde la pregunta: **¿este par de juegos merece revisión humana?**
 6. **Modelo B:** usa todas las señales y se entrena solo con etiquetas humanas.
 7. **Evaluación** contra la línea base TF-IDF (PR-AUC, precisión@20), con validación cruzada por familias.
 8. **Explicación** de cada par (palabras compartidas, peso de cada señal, imágenes lado a lado), búsqueda por juego y exportación de pares para etiquetar.
+9. **Exporta un paquete** con el modelo y todo lo ya calculado, para que la app lo use sin GPU.
 
 Se corre en Google Colab con GPU. Las instrucciones paso a paso están en la [Guía técnica](docs/GUIA_TECNICA.md#7-cómo-correr-cada-parte).
 
 ---
 
-## 🚀 App de la primera fase (línea base TF-IDF)
+## 🚀 App web (Gradio)
+
+**Modelo entrenado:** busca candidatos para un juego con el modelo del notebook, muestra la probabilidad de que cada par merezca revisión, el valor de cada señal y las imágenes de Steam, y explica qué señales subieron o bajaron la probabilidad. Se activa copiando el paquete que exporta el notebook (sección 11) a `Primera fase práctica/modelo/`.
+
+**Línea base TF-IDF:**
 
 1. **Buscar similares:** muestra los juegos más cercanos y los términos clave compartidos.
 2. **Comparar dos juegos:** desglosa el aporte de cada palabra a la similitud.
@@ -92,7 +99,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Comprueban la lógica de similitud (que el clon quede primero, que los puntajes sean simétricos, la caché, los homónimos) y la app (guardar casos, construir la interfaz). Se corren solos en GitHub en cada push.
+34 tests que comprueban la línea base (que el clon quede primero, puntajes simétricos, caché, homónimos), las señales por par (imágenes idénticas, datos faltantes), el uso del modelo entrenado (candidatos ordenados, explicación legible, Modelo A cuando no hay B) y la app (guardar casos, construir la interfaz con y sin modelo). Se corren solos en GitHub en cada push.
 
 ---
 
@@ -109,7 +116,6 @@ Evaluó la hipótesis central sobre un catálogo simulado de 28 juegos (clones d
 
 ## 🔮 Trabajo futuro
 
-* Conectar el modelo entrenado (`modelo_pares.joblib`) a la app Gradio.
 * Comparar videos y más capturas por juego.
 * Sumar otras plataformas (Roblox, itch.io).
 * **Comparación de código** (grafos de flujo de control), solo cuando exista acceso legítimo al código fuente.
