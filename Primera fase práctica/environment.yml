@@ -3,10 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.12
-  - pandas
-  - pyarrow
-  - scikit-learn
-  - joblib
   - pip
   - pip:
-      - gradio
+      # Mismas versiones fijas que usa pip y GitHub Actions
+      - -r requirements.txt

@@ -1,0 +1,14 @@
+# Dependencias del notebook FairPlay_AI_Clasificador_Pares.ipynb.
+# En Google Colab casi todo viene instalado; la primera celda del notebook instala el resto.
+# Solo hace falta este archivo para correr el notebook en un computador propio (Python 3.12).
+# Son versiones mínimas, no fijas: torch y sentence-transformers dependen de la GPU y del sistema.
+-r "Primera fase práctica/requirements.txt"
+sentence-transformers>=3.0
+torch>=2.3
+rapidfuzz>=3.6
+imagehash>=4.3
+kagglehub>=0.3
+openpyxl>=3.1
+matplotlib>=3.8
+requests>=2.31
+pillow>=10.0
