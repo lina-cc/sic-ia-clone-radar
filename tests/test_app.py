@@ -33,3 +33,15 @@ def test_resolver_datos_no_descarga_si_el_archivo_ya_existe(ruta_parquet, monkey
 def test_la_interfaz_se_construye(ruta_parquet, tmp_path):
     demo = app.crear_app(BuscadorTfidf(ruta_parquet, usar_cache=False), tmp_path / "casos.csv")
     assert isinstance(demo, gr.Blocks)
+
+
+def test_la_interfaz_se_construye_con_el_modelo(ruta_parquet, paquete_modelo, tmp_path):
+    modelo = app.cargar_modelo(paquete_modelo)
+    assert modelo is not None
+    demo = app.crear_app(BuscadorTfidf(ruta_parquet, usar_cache=False), tmp_path / "casos.csv", modelo)
+    assert isinstance(demo, gr.Blocks)
+
+
+def test_sin_carpeta_de_modelo_la_app_sigue_sin_esa_pestana(tmp_path, monkeypatch):
+    monkeypatch.delenv("FAIRPLAY_HF_DATASET", raising=False)
+    assert app.cargar_modelo(tmp_path / "no_existe") is None

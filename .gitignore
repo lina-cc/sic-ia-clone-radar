@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Data and caches
+# Data and caches (datos de Steam y modelo exportado: no se publican)
+modelo/
 *.joblib
 *.parquet
 data/

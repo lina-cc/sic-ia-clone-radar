@@ -9,7 +9,9 @@ Los casos que el grupo marque se guardan en casos/casos_guardados.csv.
 
 Variables de entorno (sirven para desplegar en Hugging Face Spaces sin tocar el código):
     FAIRPLAY_DATOS       ruta del parquet (por defecto data/juegos_texto_en.parquet)
-    FAIRPLAY_HF_DATASET  si el parquet no está en disco, se descarga de este dataset de
+    FAIRPLAY_MODELO      carpeta del modelo entrenado (por defecto modelo/). Si no existe,
+                         la pestaña "Modelo entrenado" explica cómo generarla.
+    FAIRPLAY_HF_DATASET  si el parquet o el modelo no están en disco, se descargan de este dataset de
                          Hugging Face (por ejemplo "usuario/fairplay-datos", puede ser privado)
     HF_TOKEN             token de lectura, necesario si ese dataset es privado
     GRADIO_SERVER_NAME   dirección donde escucha la app (Spaces usa 0.0.0.0)
@@ -56,7 +58,24 @@ def guardar_caso(ruta: Path, fila: dict) -> None:
             w.writerow(fila)
  
  
-def crear_app(buscador: BuscadorTfidf, ruta_casos: Path) -> gr.Blocks:
+SIN_MODELO = (
+    "**El modelo entrenado no está cargado.** Para activarlo:\n\n"
+    "1. Corre el notebook `FairPlay_AI_Clasificador_Pares.ipynb` hasta la sección 11.\n"
+    "2. Copia la carpeta `salidas/paquete_app` a `Primera fase práctica/modelo/`.\n"
+    "3. Vuelve a abrir la app (o usa `--modelo otra/carpeta`)."
+)
+
+EXPLICACION_MODELO = (
+    "Esta pestaña usa el **modelo entrenado** del notebook. Para cada candidato calcula la "
+    "**probabilidad de que el par merezca revisión humana**, combinando texto, imágenes, título, "
+    "tags y fechas. Las columnas muestran cada señal entre 0 (nada parecido) y 1 (idéntico); "
+    "vacío = no había imagen procesada para ese juego. "
+    "Solo busca juegos que estén en el catálogo del modelo."
+)
+
+
+def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Blocks:
+    """Construye la interfaz. `modelo` es un BuscadorModelo (modelo.py) o None si no hay paquete."""
     B = buscador
     tabla_vacia = pd.DataFrame(columns=COLUMNAS_TABLA)
  
@@ -134,8 +153,10 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path) -> gr.Blocks:
                          estado["puntaje"], etiqueta, comentario)
  
     # ---- interfaz --------------------------------------------------------
-    with gr.Blocks(title="Similitud entre videojuegos (TF-IDF)") as demo:
-        gr.Markdown("# Similitud entre videojuegos: línea base TF-IDF")
+    with gr.Blocks(title="FairPlay AI · Similitud entre videojuegos") as demo:
+        gr.Markdown("# FairPlay AI: similitud entre videojuegos")
+        gr.Markdown("Las tres primeras pestañas usan la **línea base TF-IDF** (solo palabras). "
+                    "La pestaña **Modelo entrenado** combina texto, imágenes y metadatos.")
         gr.Markdown(AVISO)
         anotador = gr.Textbox(label="Tu nombre (para registrar los casos que marques)",
                               placeholder="anónimo")
@@ -200,7 +221,101 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path) -> gr.Blocks:
             boton3.click(accion_texto, [texto, k3], [msg3, tabla3, estado3, elegido3], api_name="texto_nuevo")
             guardar3.click(lambda an, es, el, et, co: guardar_busqueda(an, "texto_nuevo", es, el, et, co),
                            [anotador, estado3, elegido3, etiq3, com3], res_guardar3, api_name="guardar_texto")
+
+        with gr.Tab("Modelo entrenado"):
+            if modelo is None:
+                gr.Markdown(SIN_MODELO)
+            else:
+                agregar_pestana_modelo(modelo, anotador, registrar)
     return demo
+
+
+def agregar_pestana_modelo(M, anotador, registrar) -> None:
+    """Contenido de la pestaña "Modelo entrenado" (se llama dentro de gr.Blocks)."""
+    from modelo import COLUMNAS_CANDIDATOS
+
+    cual = ("Modelo B (todas las señales, entrenado con etiquetas humanas)" if M.usa_modelo_B
+            else "Modelo A (imágenes, título, tags y fechas; entrenado con etiquetas débiles)")
+    vacia = pd.DataFrame(columns=COLUMNAS_CANDIDATOS)
+
+    def sin_opciones():
+        # Se crea al responder (no al construir la pestaña) para no dibujar un componente extra
+        return gr.Dropdown(choices=[], value=None)
+
+    def accion(nombre, k):
+        nombre = (nombre or "").strip()
+        if not nombre:
+            return "Escribe el título de un juego.", vacia, [], None, sin_opciones()
+        try:
+            q = M.tfidf.buscar(nombre)
+        except KeyError:
+            sug = M.tfidf.sugerencias(nombre)
+            msg = f"No encontré **{nombre}** en el catálogo del modelo."
+            if sug:
+                msg += "\n\nQuizás buscabas: " + ", ".join(f"`{s}`" for s in sug)
+            return msg, vacia, [], None, sin_opciones()
+        res = M.candidatos(q, int(k))
+        etiquetas = [f"{n + 1}. {j}" for n, j in enumerate(res["Juego"])]
+        estado = {"q": q, "consulta": M.tfidf.nombre(q),
+                  "cands": {e: (int(p), str(j), float(pr))
+                            for e, p, j, pr in zip(etiquetas, res["pos"], res["Juego"], res["Prob. revisar"])}}
+        galeria = [(u, c) for u, c in
+                   [(M.url_imagen(q), f"Consultado: {M.tfidf.nombre(q)}")] +
+                   [(M.url_imagen(int(p)), f"{e} · prob. {pr:.2f}")
+                    for e, p, pr in zip(etiquetas, res["pos"], res["Prob. revisar"])] if u]
+        msg = (f"Candidatos para **{M.tfidf.nombre(q)}**, ordenados por probabilidad. Modelo usado: {cual}.\n\n"
+               "*Una probabilidad alta significa \"vale la pena revisarlo\", no \"es una copia\".*")
+        return (msg, res[COLUMNAS_CANDIDATOS], galeria, estado,
+                gr.Dropdown(choices=etiquetas, value=etiquetas[0] if etiquetas else None))
+
+    def explicar(estado, elegido):
+        if not estado or not elegido:
+            return "Primero busca un juego y elige un candidato.", pd.DataFrame(), []
+        pos, nombre, _ = estado["cands"][elegido]
+        prob, aportes = M.explicar(estado["q"], pos)
+        a_favor = aportes[aportes["Aporte"] > 0]["Señal"].head(3).tolist()
+        en_contra = aportes[aportes["Aporte"] < 0]["Señal"].head(3).tolist()
+        msg = (f"**{estado['consulta']}** frente a **{nombre}**: probabilidad de revisar = **{prob:.2f}**.\n\n"
+               f"- Lo que más **sube** la probabilidad: {', '.join(a_favor) or 'nada'}\n"
+               f"- Lo que más la **baja**: {', '.join(en_contra) or 'nada'}\n\n"
+               "*Aporte* = cuánto empuja cada señal (positivo hacia \"revisar\", negativo hacia \"no revisar\"). "
+               "Las filas *Sin dato* indican que esa señal no se pudo calcular (por ejemplo, sin imágenes).")
+        imgs = [(u, c) for u, c in [(M.url_imagen(estado["q"]), estado["consulta"]),
+                                    (M.url_imagen(pos), nombre)] if u]
+        return msg, aportes, imgs
+
+    def guardar(an, estado, elegido, etiqueta, comentario):
+        if not estado or not elegido:
+            return "Primero busca un juego y elige un candidato."
+        _, nombre, prob = estado["cands"][elegido]
+        return registrar(an, "modelo", estado["consulta"], nombre, prob, etiqueta, comentario)
+
+    gr.Markdown(EXPLICACION_MODELO)
+    with gr.Row():
+        nombre = gr.Textbox(label="Título de un juego del catálogo", scale=3)
+        k = gr.Slider(3, 20, value=10, step=1, label="Cuántos candidatos", scale=1)
+    boton = gr.Button("Buscar candidatos", variant="primary")
+    msg = gr.Markdown()
+    tabla = gr.Dataframe(interactive=False, wrap=True)
+    galeria = gr.Gallery(label="Imágenes de cabecera en Steam", columns=4, height="auto")
+    estado = gr.State()
+    with gr.Accordion("Explicar un candidato", open=True):
+        elegido = gr.Dropdown(label="Candidato", choices=[])
+        boton_exp = gr.Button("Explicar")
+        msg_exp = gr.Markdown()
+        tabla_exp = gr.Dataframe(interactive=False, label="Aporte de cada señal")
+        galeria_exp = gr.Gallery(label="Lado a lado", columns=2, height="auto")
+    with gr.Accordion("Guardar este candidato como caso", open=False):
+        etiq = gr.Radio(ETIQUETAS, label="Etiqueta")
+        com = gr.Textbox(label="Comentario (opcional)")
+        boton_guardar = gr.Button("Guardar caso")
+        res_guardar = gr.Markdown()
+
+    salidas = [msg, tabla, galeria, estado, elegido]
+    boton.click(accion, [nombre, k], salidas, api_name="modelo_buscar")
+    nombre.submit(accion, [nombre, k], salidas)
+    boton_exp.click(explicar, [estado, elegido], [msg_exp, tabla_exp, galeria_exp], api_name="modelo_explicar")
+    boton_guardar.click(guardar, [anotador, estado, elegido, etiq, com], res_guardar, api_name="guardar_modelo")
  
  
 def resolver_datos(ruta: str | Path) -> Path:
@@ -219,9 +334,41 @@ def resolver_datos(ruta: str | Path) -> Path:
     return Path(descargado)
 
 
+def cargar_modelo(carpeta: str | Path):
+    """Carga el modelo entrenado si existe; si no, devuelve None y la app sigue sin esa pestaña.
+
+    En Spaces, si la carpeta no existe y está FAIRPLAY_HF_DATASET, descarga los archivos
+    desde la carpeta del mismo nombre dentro del dataset (por ejemplo modelo/catalogo.parquet).
+    """
+    from modelo import ARCHIVOS, BuscadorModelo
+
+    carpeta = Path(carpeta)
+    repo = os.environ.get("FAIRPLAY_HF_DATASET")
+    if not carpeta.exists() and repo:
+        from huggingface_hub import hf_hub_download
+
+        print(f"Descargando el modelo desde el dataset {repo} de Hugging Face...")
+        try:
+            for f in ARCHIVOS:
+                hf_hub_download(repo_id=repo, filename=f"{carpeta.name}/{f}", repo_type="dataset",
+                                token=os.environ.get("HF_TOKEN"), local_dir=carpeta.parent)
+        except Exception as e:
+            print(f"No se pudo descargar el modelo ({e}). La pestaña del modelo quedará desactivada.")
+            return None
+    if not carpeta.exists():
+        print(f"Sin modelo entrenado en {carpeta}: la pestaña 'Modelo entrenado' explicará cómo generarlo.")
+        return None
+    print("Cargando el modelo entrenado...")
+    m = BuscadorModelo(carpeta)
+    print(f"Modelo listo: {len(m.df)} juegos en su catálogo.")
+    return m
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--datos", default=os.environ.get("FAIRPLAY_DATOS", "data/juegos_texto_en.parquet"))
+    p.add_argument("--modelo", default=os.environ.get("FAIRPLAY_MODELO", "modelo"),
+                   help="carpeta con el paquete exportado por el notebook (sección 11)")
     p.add_argument("--casos", default="casos/casos_guardados.csv")
     p.add_argument("--puerto", type=int, default=int(os.environ.get("GRADIO_SERVER_PORT", 7860)))
     p.add_argument("--share", action="store_true", help="enlace público temporal")
@@ -233,8 +380,9 @@ def main() -> None:
     except FileNotFoundError as e:
         raise SystemExit(f"\nERROR: {e}")
     print(f"Listo: {len(buscador.df)} juegos, matriz {buscador.X.shape}.")
+    modelo = cargar_modelo(args.modelo)
     # En local escucha solo en 127.0.0.1; en Spaces la variable GRADIO_SERVER_NAME vale 0.0.0.0
-    crear_app(buscador, Path(args.casos)).launch(
+    crear_app(buscador, Path(args.casos), modelo).launch(
         share=args.share, server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
         server_port=args.puerto)
  
