@@ -60,7 +60,8 @@ El ciclo de la derecha es importante: **cada par que el equipo etiqueta mejora e
 |---|---|---|
 | **Python 3.12** | Lenguaje de todo el proyecto | Es la versión de Google Colab y la que soportan todas las librerías. Python 3.14 todavía da problemas con torch. |
 | **pandas + pyarrow** | Tablas de juegos y pares; leer/escribir parquet | Estándar del curso. Parquet es mucho más rápido y liviano que CSV. |
-| **scikit-learn** | TF-IDF, búsqueda de vecinos, regresión logística, validación cruzada, métricas | Visto en clases; todo en una sola librería; modelos interpretables. |
+| **scikit-learn** | TF-IDF, regresión logística, validación cruzada, métricas (y búsqueda de vecinos cuando no hay GPU) | Visto en clases; todo en una sola librería; modelos interpretables. |
+| **torch** (en Colab) | Búsqueda de vecinos en la GPU | Con todo Steam (~138 mil juegos), buscar los vecinos con scikit-learn en la CPU tarda más de 15 minutos; en la GPU, segundos. Da exactamente los mismos vecinos. |
 | **sentence-transformers** | Embeddings de texto (`paraphrase-multilingual-MiniLM-L12-v2`) y de imagen (CLIP `clip-ViT-B-32`) | Modelos preentrenados de Hugging Face (transfer learning). MiniLM es rápido y entiende varios idiomas; CLIP compara imágenes por contenido. |
 | **imagehash** | Hash perceptual de imágenes (`phash`) | Detecta imágenes **casi idénticas** (assets reutilizados) de forma barata y fácil de explicar. Complementa a CLIP, que detecta imágenes *parecidas*. |
 | **rapidfuzz** | Parecido entre títulos | Muy rápido y tolera palabras reordenadas ("Escape the Walls" vs "Walls Escape"). |
@@ -171,6 +172,8 @@ Opciones útiles de la configuración:
 | `CAPTURAS_API = True` | Si el catálogo no trae capturas. Es lento (~1,5 s por juego), por eso viene apagado. |
 | `N_CAPTURAS` | Más capturas = mejor detección de assets reutilizados, pero más descargas. |
 | `MAX_JUEGOS` | Sin GPU, bajarlo a ~20000. |
+
+Lo que ya se calculó queda guardado en `MyDrive/fairplay/salidas/` (embeddings, vecinos, imágenes procesadas) y **no se recalcula** en la siguiente corrida mientras el catálogo no cambie. Por eso la primera corrida es la lenta (descarga del dataset, embeddings e imágenes) y las siguientes son mucho más rápidas.
 
 ### App en local
 
