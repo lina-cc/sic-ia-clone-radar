@@ -4,14 +4,23 @@ Uso:
     python app.py                       # datos en data/juegos_texto_en.parquet
     python app.py --datos otra/ruta.parquet
     python app.py --share               # enlace público temporal mientras la app corre
- 
+
 Los casos que el grupo marque se guardan en casos/casos_guardados.csv.
+
+Variables de entorno (sirven para desplegar en Hugging Face Spaces sin tocar el código):
+    FAIRPLAY_DATOS       ruta del parquet (por defecto data/juegos_texto_en.parquet)
+    FAIRPLAY_HF_DATASET  si el parquet no está en disco, se descarga de este dataset de
+                         Hugging Face (por ejemplo "usuario/fairplay-datos", puede ser privado)
+    HF_TOKEN             token de lectura, necesario si ese dataset es privado
+    GRADIO_SERVER_NAME   dirección donde escucha la app (Spaces usa 0.0.0.0)
+    GRADIO_SERVER_PORT   puerto (por defecto 7860)
 """
- 
+
 from __future__ import annotations
 
 import argparse
 import csv
+import os
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -194,22 +203,40 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path) -> gr.Blocks:
     return demo
  
  
+def resolver_datos(ruta: str | Path) -> Path:
+    """Devuelve la ruta del parquet. Si no existe y está definido FAIRPLAY_HF_DATASET,
+    lo descarga desde Hugging Face a la misma carpeta (así funciona en Spaces, donde
+    los datos no pueden ir dentro del repositorio público)."""
+    ruta = Path(ruta)
+    repo = os.environ.get("FAIRPLAY_HF_DATASET")
+    if ruta.exists() or not repo:
+        return ruta
+    from huggingface_hub import hf_hub_download  # viene instalado con gradio
+
+    print(f"Descargando {ruta.name} desde el dataset {repo} de Hugging Face...")
+    descargado = hf_hub_download(repo_id=repo, filename=ruta.name, repo_type="dataset",
+                                 token=os.environ.get("HF_TOKEN"), local_dir=ruta.parent)
+    return Path(descargado)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--datos", default="data/juegos_texto_en.parquet")
+    p.add_argument("--datos", default=os.environ.get("FAIRPLAY_DATOS", "data/juegos_texto_en.parquet"))
     p.add_argument("--casos", default="casos/casos_guardados.csv")
-    p.add_argument("--puerto", type=int, default=7860)
+    p.add_argument("--puerto", type=int, default=int(os.environ.get("GRADIO_SERVER_PORT", 7860)))
     p.add_argument("--share", action="store_true", help="enlace público temporal")
     args = p.parse_args()
- 
+
     print("Cargando datos y ajustando TF-IDF (la primera vez tarda; luego usa caché)...")
     try:
-        buscador = BuscadorTfidf(args.datos)
+        buscador = BuscadorTfidf(resolver_datos(args.datos))
     except FileNotFoundError as e:
         raise SystemExit(f"\nERROR: {e}")
     print(f"Listo: {len(buscador.df)} juegos, matriz {buscador.X.shape}.")
+    # En local escucha solo en 127.0.0.1; en Spaces la variable GRADIO_SERVER_NAME vale 0.0.0.0
     crear_app(buscador, Path(args.casos)).launch(
-        share=args.share, server_name="127.0.0.1", server_port=args.puerto)
+        share=args.share, server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
+        server_port=args.puerto)
  
  
 if __name__ == "__main__":
