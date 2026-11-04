@@ -20,3 +20,8 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# Material del curso: tiene derechos reservados (Samsung) o datos de otras personas
+# (lista de equipos, enlace de Meet). Está en el Drive del curso; no se publica aquí.
+Documentos/Proyecto Final/
+Documentos/SIC2026_IA_Documento_Maestro.pdf
