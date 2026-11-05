@@ -82,9 +82,9 @@ Permiten configurar la app sin cambiar el código. Son las que usa Hugging Face 
 
 Resumen (los pasos completos están en la [Guía técnica](../docs/GUIA_TECNICA.md#8-publicar-la-app-en-hugging-face-spaces)):
 
-1. Subir a un **dataset privado** de Hugging Face el archivo `juegos_texto_en.parquet` y, dentro de una carpeta `modelo/`, los cuatro archivos del paquete del modelo.
+1. Subir a un **dataset privado** de Hugging Face, dentro de una carpeta `modelo/`, los cuatro archivos del paquete del modelo.
 2. Crear un **Space** con SDK Gradio y subir `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt`.
-3. En *Settings → Variables and secrets* del Space: la variable `FAIRPLAY_HF_DATASET` con el nombre del dataset y el secreto `HF_TOKEN`.
+3. En *Settings → Variables and secrets* del Space: las variables `FAIRPLAY_HF_DATASET` (nombre del dataset) y `FAIRPLAY_DATOS=modelo/catalogo.parquet`, y el secreto `HF_TOKEN`.
 
 En Spaces gratuitos el disco se borra al reiniciar: los casos guardados ahí se pierden.
 

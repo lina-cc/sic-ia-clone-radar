@@ -328,9 +328,12 @@ def resolver_datos(ruta: str | Path) -> Path:
         return ruta
     from huggingface_hub import hf_hub_download  # viene instalado con gradio
 
-    print(f"Descargando {ruta.name} desde el dataset {repo} de Hugging Face...")
-    descargado = hf_hub_download(repo_id=repo, filename=ruta.name, repo_type="dataset",
-                                 token=os.environ.get("HF_TOKEN"), local_dir=ruta.parent)
+    # Ruta relativa (p. ej. modelo/catalogo.parquet): se busca con esa misma ruta dentro del dataset.
+    # Ruta absoluta: se busca solo por el nombre del archivo, en la raíz del dataset.
+    nombre, destino = (ruta.name, ruta.parent) if ruta.is_absolute() else (ruta.as_posix(), Path("."))
+    print(f"Descargando {nombre} desde el dataset {repo} de Hugging Face...")
+    descargado = hf_hub_download(repo_id=repo, filename=nombre, repo_type="dataset",
+                                 token=os.environ.get("HF_TOKEN"), local_dir=destino)
     return Path(descargado)
 
 
@@ -344,12 +347,13 @@ def cargar_modelo(carpeta: str | Path):
 
     carpeta = Path(carpeta)
     repo = os.environ.get("FAIRPLAY_HF_DATASET")
-    if not carpeta.exists() and repo:
+    faltan = [f for f in ARCHIVOS if not (carpeta / f).exists()]
+    if faltan and repo:  # la carpeta puede existir a medias (p. ej. si --datos apunta a modelo/catalogo.parquet)
         from huggingface_hub import hf_hub_download
 
         print(f"Descargando el modelo desde el dataset {repo} de Hugging Face...")
         try:
-            for f in ARCHIVOS:
+            for f in faltan:
                 hf_hub_download(repo_id=repo, filename=f"{carpeta.name}/{f}", repo_type="dataset",
                                 token=os.environ.get("HF_TOKEN"), local_dir=carpeta.parent)
         except Exception as e:

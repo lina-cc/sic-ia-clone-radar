@@ -211,12 +211,13 @@ Deben pasar todos. En GitHub se corren solos en cada push (pestaña **Actions**)
 
 Así la demo tiene un enlace permanente, sin depender de que alguien tenga su computador encendido.
 
-1. **Subir los datos a un dataset privado.** En huggingface.co: *New → Dataset*, marcarlo **privado**, y subir `juegos_texto_en.parquet`. Para la pestaña del modelo, subir también los cuatro archivos de `salidas/paquete_app` dentro de una carpeta `modelo/` del dataset.
+1. **Subir los datos a un dataset privado.** En huggingface.co: *New → Dataset*, marcarlo **privado**, y subir los cuatro archivos de `salidas/paquete_app` dentro de una carpeta `modelo/` del dataset. Con eso basta: el catálogo del modelo (`modelo/catalogo.parquet`) sirve también para las pestañas de la línea base.
 2. **Crear un token de lectura.** *Settings → Access Tokens → New token* (tipo *Read*).
 3. **Crear el Space.** *New → Space*, SDK **Gradio**.
-4. **Subir al Space** los archivos `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt` de `Primera fase práctica/`.
+4. **Subir al Space** los archivos `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt` de `Primera fase práctica/`, más un `README.md` con la cabecera de Spaces (`sdk: gradio`, `sdk_version` igual a la de `requirements.txt`, `python_version: "3.12"`).
 5. **Configurar el Space** en *Settings → Variables and secrets*:
    * Variable `FAIRPLAY_HF_DATASET` = `usuario/nombre-del-dataset`
+   * Variable `FAIRPLAY_DATOS` = `modelo/catalogo.parquet`
    * Secreto `HF_TOKEN` = el token del paso 2
 6. El Space instala las dependencias y arranca. La app descarga el parquet y el modelo al iniciar (funciones `resolver_datos` y `cargar_modelo` en `app.py`).
 

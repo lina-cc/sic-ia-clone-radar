@@ -45,3 +45,40 @@ def test_la_interfaz_se_construye_con_el_modelo(ruta_parquet, paquete_modelo, tm
 def test_sin_carpeta_de_modelo_la_app_sigue_sin_esa_pestana(tmp_path, monkeypatch):
     monkeypatch.delenv("FAIRPLAY_HF_DATASET", raising=False)
     assert app.cargar_modelo(tmp_path / "no_existe") is None
+
+
+def test_resolver_datos_relativa_conserva_la_carpeta_dentro_del_dataset(monkeypatch, tmp_path):
+    """En Spaces, FAIRPLAY_DATOS=modelo/catalogo.parquet descarga modelo/catalogo.parquet del dataset."""
+    import huggingface_hub
+
+    pedidos = []
+
+    def falso_hf_hub_download(repo_id, filename, repo_type, token, local_dir):
+        pedidos.append((filename, str(local_dir)))
+        return str(tmp_path / filename)
+
+    monkeypatch.setenv("FAIRPLAY_HF_DATASET", "usuario/datos")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", falso_hf_hub_download)
+    app.resolver_datos("modelo/catalogo.parquet")
+    assert pedidos == [("modelo/catalogo.parquet", ".")]
+
+
+def test_cargar_modelo_completa_una_carpeta_a_medias(paquete_modelo, monkeypatch):
+    """Si la carpeta ya existe pero le faltan archivos, descarga solo los que faltan."""
+    import shutil
+
+    import huggingface_hub
+
+    respaldo = paquete_modelo.parent / "respaldo.joblib"
+    shutil.move(paquete_modelo / "modelo_pares.joblib", respaldo)
+    pedidos = []
+
+    def falso_hf_hub_download(repo_id, filename, repo_type, token, local_dir):
+        pedidos.append(filename)
+        shutil.copy(respaldo, paquete_modelo / "modelo_pares.joblib")
+
+    monkeypatch.setenv("FAIRPLAY_HF_DATASET", "usuario/datos")
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", falso_hf_hub_download)
+    assert app.cargar_modelo(paquete_modelo) is not None
+    assert pedidos == [f"{paquete_modelo.name}/modelo_pares.joblib"]
