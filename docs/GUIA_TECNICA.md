@@ -266,6 +266,7 @@ Convención de mensajes: `feat:` (algo nuevo), `fix:` (corrección), `docs:` (do
 
 * Las etiquetas débiles salen del texto: miden "texto casi idéntico", no "copia".
 * El TF-IDF está pensado para inglés. Las descripciones en otros idiomas quedan casi vacías y pueden dar `tfidf_cos = 1` entre textos distintos. En la primera corrida con todo Steam eso volvió falsa la mitad de los positivos débiles; por eso ahora se exige además `emb_cos ≥ 0.80` y un mínimo de términos (`MIN_TERMINOS`).
+* El Modelo A se entrena solo con pares débiles que tienen imagen. En una corrida, a los negativos les faltaba imagen mucho más que a los positivos (87 % contra 14 %), y el modelo aprendía la regla falsa "sin imagen = no es copia".
 * Se usan pocas imágenes por juego (header y unas pocas capturas). No se analizan videos ni jugabilidad.
 * Los juegos con descripción muy corta se descartan.
 * La validación por grupos agrupa por familias de positivos; un juego puede aparecer en pares negativos de distintos grupos.
