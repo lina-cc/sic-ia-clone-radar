@@ -10,6 +10,8 @@ Este repositorio contiene la investigación, la documentación y el prototipo de
 
 📘 **¿Primera vez aquí?** Lee la [Guía técnica](docs/GUIA_TECNICA.md): explica el flujo de datos, cada señal, el modelo, las métricas, el stack y cómo correr todo.
 
+🏷️ **¿Vas a etiquetar pares?** Sigue la [Guía de etiquetado](docs/GUIA_ETIQUETADO.md).
+
 ---
 
 ## 📂 Estructura del repositorio
@@ -29,7 +31,8 @@ sic-ia-clone-radar/
 │   └── environment.yml                   # Entorno Conda equivalente.
 ├── tests/                                # Tests automáticos (pytest).
 ├── docs/
-│   └── GUIA_TECNICA.md                   # Documentación técnica completa.
+│   ├── GUIA_TECNICA.md                   # Documentación técnica completa.
+│   └── GUIA_ETIQUETADO.md                # Cómo etiquetar el lote de pares (para el Modelo B).
 ├── Documentos/                           # Informe, pitch y hoja de trabajo del equipo.
 ├── .github/workflows/tests.yml           # Corre los tests en cada push (GitHub Actions).
 ├── requirements-dev.txt                  # Dependencias para desarrollar (app + pytest).
@@ -55,7 +58,7 @@ Responde la pregunta: **¿este par de juegos merece revisión humana?**
 5. **Modelo A:** regresión logística que aprende a reconocer clones **sin mirar el texto**, para detectar clones con la descripción reescrita.
 6. **Modelo B:** usa todas las señales y se entrena solo con etiquetas humanas.
 7. **Evaluación** contra la línea base TF-IDF (PR-AUC, precisión@20), con validación cruzada por familias.
-8. **Explicación** de cada par (palabras compartidas, peso de cada señal, imágenes lado a lado), búsqueda por juego y exportación de pares para etiquetar.
+8. **Explicación** de cada par (palabras compartidas, peso de cada señal, imágenes lado a lado), búsqueda por juego y un **lote de 100 pares para etiquetar** (Excel con lista desplegable).
 9. **Exporta un paquete** con el modelo y todo lo ya calculado, para que la app lo use sin GPU.
 
 Se corre en Google Colab con GPU. Las instrucciones paso a paso están en la [Guía técnica](docs/GUIA_TECNICA.md#7-cómo-correr-cada-parte).

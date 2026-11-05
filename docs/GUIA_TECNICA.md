@@ -113,7 +113,7 @@ Es un problema de **clasificación binaria sobre pares**, no sobre juegos indivi
 
 | Tipo | Origen | Ventaja | Problema |
 |---|---|---|---|
-| **Humanas** | `Plantilla_registro_coincidencias.xlsx` y los casos guardados en la app | Son confiables | Son pocas y cuesta conseguirlas |
+| **Humanas** | `Plantilla_registro_coincidencias.xlsx`, los casos guardados en la app y el **lote de la sección 10** (`data/lote_etiquetado.xlsx`, ver [Guía de etiquetado](GUIA_ETIQUETADO.md)) | Son confiables | Son pocas y cuesta conseguirlas |
 | **Débiles** (automáticas) | Positivo: descripción casi idéntica (`tfidf_cos ≥ 0.90`) y con el mismo significado (`emb_cos ≥ 0.80`) entre estudios distintos. Negativo: mismo tema pero texto distinto (`0.20–0.60`). Ambas descripciones deben tener al menos 20 términos TF-IDF | Hay miles, gratis | Son aproximadas y **se definen con el texto** |
 
 ### 6.3 Por qué hay dos modelos
@@ -270,6 +270,7 @@ Convención de mensajes: `feat:` (algo nuevo), `fix:` (corrección), `docs:` (do
 * El TF-IDF está pensado para inglés. Las descripciones en otros idiomas quedan casi vacías y pueden dar `tfidf_cos = 1` entre textos distintos. En la primera corrida con todo Steam eso volvió falsa la mitad de los positivos débiles; por eso ahora se exige además `emb_cos ≥ 0.80` y un mínimo de términos (`MIN_TERMINOS`).
 * El Modelo A se entrena solo con pares débiles que tienen imagen. En una corrida, a los negativos les faltaba imagen mucho más que a los positivos (87 % contra 14 %), y el modelo aprendía la regla falsa "sin imagen = no es copia".
 * Se usan pocas imágenes por juego (header y unas pocas capturas). No se analizan videos ni jugabilidad.
+* En la app, los juegos que no se usaron al entrenar tienen solo la imagen de cabecera (`CABECERAS_APP`). Con una sola imagen, `img_cos` tiende a salir algo más bajo que con header y capturas.
 * Los juegos con descripción muy corta se descartan.
 * La validación por grupos agrupa por familias de positivos; un juego puede aparecer en pares negativos de distintos grupos.
 * Solo Steam. Roblox, itch.io y otras tiendas quedan como trabajo futuro.
