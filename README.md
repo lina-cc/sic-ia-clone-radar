@@ -63,6 +63,20 @@ Responde la pregunta: **¿este par de juegos merece revisión humana?**
 
 Se corre en Google Colab con GPU. Las instrucciones paso a paso están en la [Guía técnica](docs/GUIA_TECNICA.md#7-cómo-correr-cada-parte).
 
+### Resultados actuales (4 de noviembre de 2026)
+
+Corrida completa en Colab (GPU T4) sobre **137.976 juegos** de Steam (dataset de Kaggle). Todavía **no hay etiquetas humanas**, así que esta tabla es la validación cruzada del **Modelo A** sobre 3.000 pares con etiquetas débiles (750 positivos), con grupos por familia:
+
+| Modelo | PR-AUC | ROC-AUC | Precisión@20 |
+|---|---|---|---|
+| Modelo A · regresión logística | 0,363 | 0,664 | 0,45 |
+| Modelo A · gradient boosting | 0,415 | 0,722 | 0,50 |
+| Azar (referencia) | 0,247 | 0,499 | 0,30 |
+
+* **Qué dice:** sin mirar el texto, el modelo ordena los pares mejor que el azar, aunque con margen moderado. La señal que más pesa es la coincidencia de géneros y tags; después, la imagen (CLIP).
+* **Qué no dice:** las etiquetas débiles salen del texto, así que esto no mide "detectar copias". La evaluación que vale para el informe es la de la sección 7 con etiquetas humanas (ver [Guía de etiquetado](docs/GUIA_ETIQUETADO.md)).
+* **Corridas anteriores descartadas:** una dio PR-AUC 0,669, pero estaba inflada porque al modelo le bastaba ver si faltaba la imagen (detalles en la [Guía técnica](docs/GUIA_TECNICA.md#11-limitaciones-conocidas)).
+
 ---
 
 ## 🚀 App web (Gradio)
