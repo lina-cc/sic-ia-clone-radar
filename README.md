@@ -106,7 +106,7 @@ Ambos son una **regresión logística** (imputación de vacíos → estandarizac
 
 ### Explicación de cada par
 
-La app muestra cuánto empujó cada señal hacia "revisar" o "no revisar", además de las imágenes de ambos juegos lado a lado:
+Al elegir un candidato, la app muestra qué señales suben y cuáles bajan la probabilidad, y cuánto empujó cada una (debajo aparecen las imágenes de ambos juegos lado a lado; en las capturas se ocultan porque son arte de Steam):
 
 <p align="center">
   <img src="docs/img/app_explicacion.png" alt="Explicación del par Stardew Valley y Cornucopia: aporte de cada señal a la probabilidad" width="800">
@@ -207,6 +207,7 @@ sic-ia-clone-radar/
 ├── FairPlay_AI_DBSCAN.ipynb              # Primer experimento con datos simulados (antecedente).
 ├── Primera fase práctica/                # La app web.
 │   ├── app.py                            # Interfaz Gradio y registro de casos.
+│   ├── vista.py                          # Tema, estilos y tarjetas HTML de la interfaz.
 │   ├── modelo.py                         # Carga el paquete del modelo, busca candidatos y explica pares.
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Línea base TF-IDF + similitud coseno.

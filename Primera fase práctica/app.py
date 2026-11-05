@@ -24,11 +24,13 @@ import argparse
 import csv
 import os
 import threading
+from html import escape
 from datetime import datetime
 from pathlib import Path
 
 import gradio as gr
 import pandas as pd
+import vista
 from similitud import COLUMNAS_TABLA, BuscadorTfidf
 
 ETIQUETAS = ["Similar", "No similar", "Posible copia"]
@@ -37,13 +39,7 @@ COLUMNAS_CASOS = ["fecha", "anotador", "tipo", "consulta", "juego_comparado",
                   "puntaje", "etiqueta", "comentario"]
 ANCHOS = ["20%", "9%", "16%", "11%", "36%", "8%"]   # Juego, Puntaje, Géneros, Fecha, Términos, Steam
 EJEMPLOS = ["Project Zomboid", "Left 4 Dead 2", "Stardew Valley"]
- 
-AVISO = (
-    "**La similitud no es plagio.** Compartir género, mecánicas o vocabulario es normal. "
-    "Esta herramienta solo sugiere candidatos para una revisión humana. "
-    "TF-IDF compara palabras, no significado: dos juegos del mismo tema con vocabulario "
-    "distinto pueden salir poco parecidos."
-)
+EJEMPLOS_MODELO = ["Stardew Valley", "Vampire Survivors", "Project Zomboid", "Among Us"]
  
 _lock = threading.Lock()
  
@@ -59,6 +55,41 @@ def guardar_caso(ruta: Path, fila: dict) -> None:
             w.writerow(fila)
  
  
+AVISO_CORTO = (
+    "<b>La similitud no es plagio.</b> Compartir género, mecánicas o vocabulario es normal. "
+    "FairPlay AI solo ordena candidatos para que <b>una persona</b> los revise."
+)
+
+ACERCA = """
+### Cómo funciona
+
+1. **Candidatos:** para el juego que buscas, se toman sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings).
+2. **Señales:** para cada par se mide el parecido de géneros y tags, imágenes (CLIP y hash perceptual), título, texto y fechas.
+3. **Modelo:** una regresión logística combina las señales en la **probabilidad de que el par merezca revisión humana**.
+4. **Tú decides:** cada caso que marcas se guarda como etiqueta humana y sirve para entrenar y evaluar el modelo.
+
+### Qué significa cada señal
+
+| Señal | Pregunta |
+|---|---|
+| Géneros y tags | ¿Comparten géneros y etiquetas de Steam? |
+| Imágenes | ¿Sus imágenes se ven parecidas? (CLIP) |
+| Imagen idéntica | ¿Comparten una imagen casi igual? (hash perceptual) |
+| Título | ¿Los nombres se parecen? |
+| Significado | ¿Las descripciones dicen lo mismo, aunque con otras palabras? |
+| Palabras | ¿Las descripciones usan las mismas palabras? |
+
+Todas van de 0 (nada parecido) a 1 (idéntico); "—" significa que no había dato.
+
+### Qué etiqueta poner
+
+* **Posible copia:** coincidencias específicas que justifican que un especialista lo mire.
+* **Similar:** se parecen, pero por razones normales (mismo género, misma mecánica).
+* **No similar:** el parecido es casual.
+
+Datos: catálogo público de Steam (dataset de Kaggle) e imágenes de la tienda, con fines académicos.
+"""
+
 SIN_MODELO = (
     "**El modelo entrenado no está cargado.** Para activarlo:\n\n"
     "1. Corre el notebook `FairPlay_AI_Clasificador_Pares.ipynb` hasta la sección 11.\n"
@@ -79,12 +110,14 @@ def encabezado() -> str:
     """Logo y nombre de la app (el SVG va en línea para no depender de rutas servidas)."""
     logo = (ASSETS / "logo-icono.svg").read_text(encoding="utf-8")
     logo = logo.replace('width="128" height="128"', 'width="56" height="56"', 1)   # solo el marco exterior
-    return (
-        '<div style="display:flex;align-items:center;gap:14px;margin:4px 0 2px">'
-        f'{logo}<div><div style="font-size:26px;font-weight:700;line-height:1.1">'
-        'FairPlay <span style="color:#193EB0">AI</span></div>'
-        '<div style="font-size:13px;letter-spacing:2px;opacity:.7">SIMILITUD ENTRE VIDEOJUEGOS</div>'
-        '</div></div>')
+    return (f'<div class="fp-header">{logo}<div><div class="fp-name">FairPlay <span>AI</span></div>'
+            '<div class="fp-tag">Prioriza qué pares de juegos de Steam vale la pena revisar por posible réplica'
+            '</div></div></div>')
+
+
+PIE = ('<div class="fp-pie">Proyecto capstone · Samsung Innovation Campus 2026 · Equipo FairPlay AI · '
+       '<a href="https://github.com/sergiorebolledo/sic-ia-clone-radar" target="_blank" rel="noopener">'
+       'Código y documentación</a></div>')
 
 
 def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Blocks:
@@ -166,171 +199,189 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Bloc
                          estado["puntaje"], etiqueta, comentario)
  
     # ---- interfaz --------------------------------------------------------
-    with gr.Blocks(title="FairPlay AI · Similitud entre videojuegos") as demo:
-        gr.HTML(encabezado())
-        gr.Markdown("Las tres primeras pestañas usan la **línea base TF-IDF** (solo palabras). "
-                    "La pestaña **Modelo entrenado** combina texto, imágenes y metadatos.")
-        gr.Markdown(AVISO)
-        anotador = gr.Textbox(label="Tu nombre (para registrar los casos que marques)",
-                              placeholder="anónimo")
- 
-        with gr.Tab("Buscar similares"):
-            with gr.Row():
-                nombre = gr.Textbox(label="Título de un juego del dataset", scale=3)
-                k1 = gr.Slider(3, 30, value=10, step=1, label="Cuántos mostrar", scale=1)
-            boton1 = gr.Button("Buscar", variant="primary")
-            msg1 = gr.Markdown()
-            tabla1 = gr.Dataframe(headers=COLUMNAS_TABLA, interactive=False, wrap=True,
-                                  datatype=["str", "number", "str", "str", "str", "markdown"],
-                                  column_widths=ANCHOS)
-            estado1 = gr.State()
-            ejemplos = [[n] for n in EJEMPLOS if B.existe(n)]
-            if ejemplos:
-                gr.Examples(examples=ejemplos, inputs=[nombre], label="Ejemplos")
-            with gr.Accordion("Guardar un caso", open=False):
-                elegido1 = gr.Dropdown(label="¿Qué resultado quieres marcar?", choices=[])
-                etiq1 = gr.Radio(ETIQUETAS, label="Etiqueta")
-                com1 = gr.Textbox(label="Comentario (opcional)")
-                guardar1 = gr.Button("Guardar caso")
-                res_guardar1 = gr.Markdown()
-            boton1.click(accion_buscar, [nombre, k1], [msg1, tabla1, estado1, elegido1], api_name="buscar")
-            nombre.submit(accion_buscar, [nombre, k1], [msg1, tabla1, estado1, elegido1])
-            guardar1.click(lambda an, es, el, et, co: guardar_busqueda(an, "buscar", es, el, et, co),
-                           [anotador, estado1, elegido1, etiq1, com1], res_guardar1, api_name="guardar_buscar")
- 
-        with gr.Tab("Comparar dos juegos"):
-            with gr.Row():
-                a = gr.Textbox(label="Juego A")
-                b = gr.Textbox(label="Juego B")
-            boton2 = gr.Button("Comparar", variant="primary")
-            msg2 = gr.Markdown()
-            tabla2 = gr.Dataframe(interactive=False, wrap=True,
-                                  label="Términos que más aportan al parecido")
-            estado2 = gr.State()
-            with gr.Accordion("Guardar este par", open=False):
-                etiq2 = gr.Radio(ETIQUETAS, label="Etiqueta")
-                com2 = gr.Textbox(label="Comentario (opcional)")
-                guardar2 = gr.Button("Guardar caso")
-                res_guardar2 = gr.Markdown()
-            boton2.click(accion_comparar, [a, b], [msg2, tabla2, estado2], api_name="comparar")
-            guardar2.click(guardar_comparacion, [anotador, estado2, etiq2, com2],
-                           res_guardar2, api_name="guardar_comparar")
- 
-        with gr.Tab("Texto nuevo"):
-            texto = gr.Textbox(label="Descripción del juego (en inglés)", lines=6)
-            k3 = gr.Slider(3, 30, value=10, step=1, label="Cuántos mostrar")
-            boton3 = gr.Button("Buscar", variant="primary")
-            msg3 = gr.Markdown()
-            tabla3 = gr.Dataframe(headers=COLUMNAS_TABLA, interactive=False, wrap=True,
-                                  datatype=["str", "number", "str", "str", "str", "markdown"],
-                                  column_widths=ANCHOS)
-            estado3 = gr.State()
-            with gr.Accordion("Guardar un caso", open=False):
-                elegido3 = gr.Dropdown(label="¿Qué resultado quieres marcar?", choices=[])
-                etiq3 = gr.Radio(ETIQUETAS, label="Etiqueta")
-                com3 = gr.Textbox(label="Comentario (opcional)")
-                guardar3 = gr.Button("Guardar caso")
-                res_guardar3 = gr.Markdown()
-            boton3.click(accion_texto, [texto, k3], [msg3, tabla3, estado3, elegido3], api_name="texto_nuevo")
-            guardar3.click(lambda an, es, el, et, co: guardar_busqueda(an, "texto_nuevo", es, el, et, co),
-                           [anotador, estado3, elegido3, etiq3, com3], res_guardar3, api_name="guardar_texto")
+    def pestanas_linea_base():
+        gr.Markdown("Compara solo **las palabras** de las descripciones (TF-IDF). Es la referencia contra la "
+                    "que se mide el modelo: rápida y explicable, pero da falsas alarmas entre juegos del mismo "
+                    "género y no ve imágenes.")
+        with gr.Tabs():
+            with gr.Tab("Buscar similares"):
+                with gr.Row(equal_height=True):
+                    nombre = gr.Textbox(label="Título de un juego del dataset", placeholder="Ej.: Project Zomboid",
+                                        scale=4)
+                    k1 = gr.Slider(3, 30, value=10, step=1, label="Cuántos mostrar", scale=1)
+                boton1 = gr.Button("Buscar", variant="primary")
+                ejemplos = [[n] for n in EJEMPLOS if B.existe(n)]
+                if ejemplos:
+                    gr.Examples(examples=ejemplos, inputs=[nombre], label="Ejemplos")
+                msg1 = gr.Markdown()
+                tabla1 = gr.Dataframe(headers=COLUMNAS_TABLA, interactive=False, wrap=True,
+                                      datatype=["str", "number", "str", "str", "str", "markdown"],
+                                      column_widths=ANCHOS)
+                estado1 = gr.State()
+                with gr.Accordion("Guardar un caso", open=False):
+                    elegido1 = gr.Dropdown(label="¿Qué resultado quieres marcar?", choices=[])
+                    etiq1 = gr.Radio(ETIQUETAS, label="Etiqueta")
+                    com1 = gr.Textbox(label="Comentario (opcional)")
+                    guardar1 = gr.Button("Guardar caso")
+                    res_guardar1 = gr.Markdown()
+                boton1.click(accion_buscar, [nombre, k1], [msg1, tabla1, estado1, elegido1], api_name="buscar")
+                nombre.submit(accion_buscar, [nombre, k1], [msg1, tabla1, estado1, elegido1])
+                guardar1.click(lambda an, es, el, et, co: guardar_busqueda(an, "buscar", es, el, et, co),
+                               [anotador, estado1, elegido1, etiq1, com1], res_guardar1, api_name="guardar_buscar")
 
-        with gr.Tab("Modelo entrenado"):
-            if modelo is None:
-                gr.Markdown(SIN_MODELO)
+            with gr.Tab("Comparar dos juegos"):
+                with gr.Row():
+                    a = gr.Textbox(label="Juego A", placeholder="Ej.: Stardew Valley")
+                    b = gr.Textbox(label="Juego B", placeholder="Ej.: Coral Island")
+                boton2 = gr.Button("Comparar", variant="primary")
+                msg2 = gr.Markdown()
+                tabla2 = gr.Dataframe(interactive=False, wrap=True,
+                                      label="Términos que más aportan al parecido")
+                estado2 = gr.State()
+                with gr.Accordion("Guardar este par", open=False):
+                    etiq2 = gr.Radio(ETIQUETAS, label="Etiqueta")
+                    com2 = gr.Textbox(label="Comentario (opcional)")
+                    guardar2 = gr.Button("Guardar caso")
+                    res_guardar2 = gr.Markdown()
+                boton2.click(accion_comparar, [a, b], [msg2, tabla2, estado2], api_name="comparar")
+                guardar2.click(guardar_comparacion, [anotador, estado2, etiq2, com2],
+                               res_guardar2, api_name="guardar_comparar")
+
+            with gr.Tab("Texto nuevo"):
+                texto = gr.Textbox(label="Descripción del juego (en inglés)", lines=6,
+                                   placeholder="Pega aquí la descripción de un juego, en inglés.")
+                k3 = gr.Slider(3, 30, value=10, step=1, label="Cuántos mostrar")
+                boton3 = gr.Button("Buscar", variant="primary")
+                msg3 = gr.Markdown()
+                tabla3 = gr.Dataframe(headers=COLUMNAS_TABLA, interactive=False, wrap=True,
+                                      datatype=["str", "number", "str", "str", "str", "markdown"],
+                                      column_widths=ANCHOS)
+                estado3 = gr.State()
+                with gr.Accordion("Guardar un caso", open=False):
+                    elegido3 = gr.Dropdown(label="¿Qué resultado quieres marcar?", choices=[])
+                    etiq3 = gr.Radio(ETIQUETAS, label="Etiqueta")
+                    com3 = gr.Textbox(label="Comentario (opcional)")
+                    guardar3 = gr.Button("Guardar caso")
+                    res_guardar3 = gr.Markdown()
+                boton3.click(accion_texto, [texto, k3], [msg3, tabla3, estado3, elegido3], api_name="texto_nuevo")
+                guardar3.click(lambda an, es, el, et, co: guardar_busqueda(an, "texto_nuevo", es, el, et, co),
+                               [anotador, estado3, elegido3, etiq3, com3], res_guardar3, api_name="guardar_texto")
+
+    with gr.Blocks(title="FairPlay AI · Similitud entre videojuegos") as demo:
+        # Se crea antes de las pestañas (las usan al guardar casos) y se dibuja al final
+        anotador = gr.Textbox(show_label=False, placeholder="anónimo", render=False)
+        with gr.Row(equal_height=True):
+            with gr.Column(scale=3):
+                gr.HTML(encabezado())
+            with gr.Column(scale=2, min_width=280):
+                gr.HTML(f'<div class="fp-aviso">{AVISO_CORTO}</div>')
+        # El modelo entrenado es la herramienta principal; la línea base queda como referencia
+        with gr.Tabs():
+            if modelo is not None:
+                with gr.Tab("Buscar candidatos"):
+                    agregar_pestana_modelo(modelo, anotador, registrar)
+                with gr.Tab("Línea base (solo palabras)"):
+                    pestanas_linea_base()
             else:
-                agregar_pestana_modelo(modelo, anotador, registrar)
+                with gr.Tab("Línea base (solo palabras)"):
+                    pestanas_linea_base()
+                with gr.Tab("Modelo entrenado"):
+                    gr.Markdown(SIN_MODELO)
+            with gr.Tab("Acerca de"):
+                gr.Markdown(ACERCA)
+        with gr.Accordion("Tu nombre, para registrar los casos que marques", open=False):
+            anotador.render()
+        gr.HTML(PIE)
     return demo
 
 
 def agregar_pestana_modelo(M, anotador, registrar) -> None:
-    """Contenido de la pestaña "Modelo entrenado" (se llama dentro de gr.Blocks)."""
+    """Pestaña principal: candidatos del modelo entrenado, explicación de un par y veredicto."""
     from modelo import COLUMNAS_CANDIDATOS
 
-    cual = ("Modelo B (todas las señales, entrenado con etiquetas humanas)" if M.usa_modelo_B
-            else "Modelo A (imágenes, título, tags y fechas; entrenado con etiquetas débiles)")
+    cual = ("Modelo B: todas las señales, entrenado con etiquetas humanas" if M.usa_modelo_B
+            else "Modelo A: imágenes, título, tags y fechas, entrenado con etiquetas automáticas")
     vacia = pd.DataFrame(columns=COLUMNAS_CANDIDATOS)
+    inicio = vista.vacio("Escribe el nombre de un juego de Steam, o elige un ejemplo, "
+                         "para ver qué juegos <b>vale la pena revisar</b> junto a él.")
+    inicio_exp = vista.vacio("Cuando busques un juego, aquí verás <b>por qué</b> el modelo recomienda revisar "
+                             "cada candidato.")
 
     def sin_opciones():
-        # Se crea al responder (no al construir la pestaña) para no dibujar un componente extra
         return gr.Dropdown(choices=[], value=None)
 
     def accion(nombre, k):
         nombre = (nombre or "").strip()
         if not nombre:
-            return "Escribe el título de un juego.", vacia, [], None, sin_opciones()
+            return vista.vacio("Escribe el título de un juego."), vacia, None, sin_opciones()
         try:
             q = M.tfidf.buscar(nombre)
         except KeyError:
             sug = M.tfidf.sugerencias(nombre)
-            msg = f"No encontré **{nombre}** en el catálogo del modelo."
+            msg = f"No encontré <b>{escape(nombre)}</b> en el catálogo."
             if sug:
-                msg += "\n\nQuizás buscabas: " + ", ".join(f"`{s}`" for s in sug)
-            return msg, vacia, [], None, sin_opciones()
+                msg += "<br>¿Quizás buscabas " + ", ".join(f"<b>{escape(x)}</b>" for x in sug) + "?"
+            return vista.vacio(msg), vacia, None, sin_opciones()
         res = M.candidatos(q, int(k))
         etiquetas = [f"{n + 1}. {j}" for n, j in enumerate(res["Juego"])]
         estado = {"q": q, "consulta": M.tfidf.nombre(q),
                   "cands": {e: (int(p), str(j), float(pr))
                             for e, p, j, pr in zip(etiquetas, res["pos"], res["Juego"], res["Prob. revisar"])}}
-        galeria = [(u, c) for u, c in
-                   [(M.url_imagen(q), f"Consultado: {M.tfidf.nombre(q)}")] +
-                   [(M.url_imagen(int(p)), f"{e} · prob. {pr:.2f}")
-                    for e, p, pr in zip(etiquetas, res["pos"], res["Prob. revisar"])] if u]
-        msg = (f"Candidatos para **{M.tfidf.nombre(q)}**, ordenados por probabilidad. Modelo usado: {cual}.\n\n"
-               "*Una probabilidad alta significa \"vale la pena revisarlo\", no \"es una copia\".*")
-        return (msg, res[COLUMNAS_CANDIDATOS], galeria, estado,
+        html = vista.tarjetas(res, [M.url_imagen(int(p)) for p in res["pos"]], M.tfidf.nombre(q), cual)
+        return (html, res[COLUMNAS_CANDIDATOS], estado,
                 gr.Dropdown(choices=etiquetas, value=etiquetas[0] if etiquetas else None))
 
     def explicar(estado, elegido):
-        if not estado or not elegido:
-            return "Primero busca un juego y elige un candidato.", pd.DataFrame(), []
+        if not estado or not elegido or elegido not in estado["cands"]:
+            return inicio_exp
         pos, nombre, _ = estado["cands"][elegido]
         prob, aportes = M.explicar(estado["q"], pos)
-        a_favor = aportes[aportes["Aporte"] > 0]["Señal"].head(3).tolist()
-        en_contra = aportes[aportes["Aporte"] < 0]["Señal"].head(3).tolist()
-        msg = (f"**{estado['consulta']}** frente a **{nombre}**: probabilidad de revisar = **{prob:.2f}**.\n\n"
-               f"- Lo que más **sube** la probabilidad: {', '.join(a_favor) or 'nada'}\n"
-               f"- Lo que más la **baja**: {', '.join(en_contra) or 'nada'}\n\n"
-               "*Aporte* = cuánto empuja cada señal (positivo hacia \"revisar\", negativo hacia \"no revisar\"). "
-               "Las filas *Sin dato* indican que esa señal no se pudo calcular (por ejemplo, sin imágenes).")
-        imgs = [(u, c) for u, c in [(M.url_imagen(estado["q"]), estado["consulta"]),
-                                    (M.url_imagen(pos), nombre)] if u]
-        return msg, aportes, imgs
+        return vista.explicacion(estado["consulta"], nombre, prob, aportes,
+                                 M.url_imagen(estado["q"]), M.url_imagen(pos))
 
     def guardar(an, estado, elegido, etiqueta, comentario):
         if not estado or not elegido:
             return "Primero busca un juego y elige un candidato."
+        if not etiqueta:
+            return "Elige una etiqueta antes de guardar."
         _, nombre, prob = estado["cands"][elegido]
         return registrar(an, "modelo", estado["consulta"], nombre, prob, etiqueta, comentario)
 
-    gr.Markdown(EXPLICACION_MODELO)
-    with gr.Row():
-        nombre = gr.Textbox(label="Título de un juego del catálogo", scale=3)
-        k = gr.Slider(3, 20, value=10, step=1, label="Cuántos candidatos", scale=1)
-    boton = gr.Button("Buscar candidatos", variant="primary")
-    msg = gr.Markdown()
-    tabla = gr.Dataframe(interactive=False, wrap=True)
-    galeria = gr.Gallery(label="Imágenes de cabecera en Steam", columns=4, height="auto")
+    with gr.Row(equal_height=True):
+        nombre = gr.Textbox(label="Juego de Steam", placeholder="Ej.: Stardew Valley", scale=5)
+        k = gr.Slider(3, 20, value=8, step=1, label="Candidatos", scale=2, min_width=160)
+        boton = gr.Button("Buscar", variant="primary", scale=1, min_width=110, elem_classes="fp-btn")
+    ejemplos = [n for n in EJEMPLOS_MODELO if M.tfidf.existe(n)]
+    botones = []
+    if ejemplos:
+        with gr.Row():
+            gr.Markdown("**Prueba con:**")
+            botones = [gr.Button(n, size="sm", variant="secondary") for n in ejemplos]
+    resultados = gr.HTML(inicio)
+    with gr.Accordion("Ver los resultados como tabla", open=False):
+        tabla = gr.Dataframe(interactive=False, wrap=True)
     estado = gr.State()
-    with gr.Accordion("Explicar un candidato", open=True):
-        elegido = gr.Dropdown(label="Candidato", choices=[])
-        boton_exp = gr.Button("Explicar")
-        msg_exp = gr.Markdown()
-        tabla_exp = gr.Dataframe(interactive=False, label="Aporte de cada señal")
-        galeria_exp = gr.Gallery(label="Lado a lado", columns=2, height="auto")
-    with gr.Accordion("Guardar este candidato como caso", open=False):
-        etiq = gr.Radio(ETIQUETAS, label="Etiqueta")
-        com = gr.Textbox(label="Comentario (opcional)")
-        boton_guardar = gr.Button("Guardar caso")
-        res_guardar = gr.Markdown()
 
-    salidas = [msg, tabla, galeria, estado, elegido]
+    gr.Markdown("### ¿Por qué este candidato?")
+    elegido = gr.Dropdown(label="Elige un candidato para ver la explicación", choices=[])
+    explicacion = gr.HTML(inicio_exp)
+
+    gr.Markdown("### Tu veredicto")
+    with gr.Row(equal_height=True):
+        etiq = gr.Radio(ETIQUETAS, label="¿Qué es este par?", scale=2)
+        com = gr.Textbox(label="Comentario (opcional)", scale=3)
+        boton_guardar = gr.Button("Guardar caso", variant="primary", scale=1, min_width=120, elem_classes="fp-btn")
+    res_guardar = gr.Markdown()
+
+    salidas = [resultados, tabla, estado, elegido]
     boton.click(accion, [nombre, k], salidas, api_name="modelo_buscar")
     nombre.submit(accion, [nombre, k], salidas)
-    boton_exp.click(explicar, [estado, elegido], [msg_exp, tabla_exp, galeria_exp], api_name="modelo_explicar")
+    for b, n in zip(botones, ejemplos):
+        b.click(lambda n=n: n, None, nombre).then(accion, [nombre, k], salidas)
+    elegido.change(explicar, [estado, elegido], explicacion, api_name="modelo_explicar")
     boton_guardar.click(guardar, [anotador, estado, elegido, etiq, com], res_guardar, api_name="guardar_modelo")
- 
- 
+
+
 def resolver_datos(ruta: str | Path) -> Path:
     """Devuelve la ruta del parquet. Si no existe y está definido FAIRPLAY_HF_DATASET,
     lo descarga desde Hugging Face a la misma carpeta (así funciona en Spaces, donde
@@ -422,7 +473,8 @@ def main() -> None:
     # En local escucha solo en 127.0.0.1; en Spaces la variable GRADIO_SERVER_NAME vale 0.0.0.0
     crear_app(buscador, Path(args.casos), modelo).launch(
         share=args.share, server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
-        server_port=args.puerto, favicon_path=str(ASSETS / "favicon.png"))
+        server_port=args.puerto, favicon_path=str(ASSETS / "favicon.png"),
+        theme=vista.TEMA, css=vista.CSS)
  
  
 if __name__ == "__main__":

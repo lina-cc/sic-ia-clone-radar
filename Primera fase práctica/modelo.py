@@ -73,7 +73,8 @@ def nombre_legible(senal: str) -> str:
 
 
 COLUMNAS_CANDIDATOS = ["Juego", "Desarrollador", "Fecha", "Prob. revisar", "Texto (palabras)",
-                       "Texto (significado)", "Imagen (CLIP)", "Imagen idéntica", "Título", "Términos compartidos"]
+                       "Texto (significado)", "Imagen (CLIP)", "Imagen idéntica", "Título", "Géneros y tags",
+                       "Términos compartidos"]
 
 
 class BuscadorModelo:
@@ -143,6 +144,7 @@ class BuscadorModelo:
             "Imagen (CLIP)": p["img_cos"].round(2).to_numpy(),
             "Imagen idéntica": p["phash_sim"].round(2).to_numpy(),
             "Título": p["titulo_sim"].round(2).to_numpy(),
+            "Géneros y tags": p["tags_jaccard"].round(2).to_numpy(),
             "Términos compartidos": [", ".join(self.tfidf.terminos_compartidos(self.tfidf.X[q], j, 5))
                                      for j in p["j"]],
             "pos": p["j"].to_numpy(),
