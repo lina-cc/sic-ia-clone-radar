@@ -83,7 +83,9 @@ Permiten configurar la app sin cambiar el código. Son las que usa Hugging Face 
 
 ## Publicar la demo
 
-Hugging Face Spaces con Gradio ahora requiere la suscripción PRO, así que la demo se comparte con un **enlace temporal de Gradio**:
+**Versión permanente:** la app está publicada en una VM gratuita de Oracle Cloud, con HTTPS y contraseña del equipo. Los pasos y la mantención están en [`despliegue/oci/README.md`](../despliegue/oci/README.md).
+
+Para una demo rápida sin servidor: Hugging Face Spaces con Gradio ahora requiere la suscripción PRO, así que la demo se comparte con un **enlace temporal de Gradio**:
 
 * **Colab (recomendado):** abrir `FairPlay_AI_Demo.ipynb` y *Ejecutar todo*.
 * **Windows:** `.\demo.ps1` en esta carpeta (si Windows Defender bloquea `frpc`, usar Colab).
