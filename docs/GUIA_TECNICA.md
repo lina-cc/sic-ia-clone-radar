@@ -114,7 +114,7 @@ Es un problema de **clasificación binaria sobre pares**, no sobre juegos indivi
 | Tipo | Origen | Ventaja | Problema |
 |---|---|---|---|
 | **Humanas** | `Plantilla_registro_coincidencias.xlsx` y los casos guardados en la app | Son confiables | Son pocas y cuesta conseguirlas |
-| **Débiles** (automáticas) | Positivo: descripción casi idéntica (`tfidf_cos ≥ 0.90`) entre estudios distintos. Negativo: mismo tema pero texto distinto (`0.20–0.60`) | Hay miles, gratis | Son aproximadas y **se definen con el texto** |
+| **Débiles** (automáticas) | Positivo: descripción casi idéntica (`tfidf_cos ≥ 0.90`) y con el mismo significado (`emb_cos ≥ 0.80`) entre estudios distintos. Negativo: mismo tema pero texto distinto (`0.20–0.60`). Ambas descripciones deben tener al menos 20 términos TF-IDF | Hay miles, gratis | Son aproximadas y **se definen con el texto** |
 
 ### 6.3 Por qué hay dos modelos
 
@@ -265,6 +265,7 @@ Convención de mensajes: `feat:` (algo nuevo), `fix:` (corrección), `docs:` (do
 ## 11. Limitaciones conocidas
 
 * Las etiquetas débiles salen del texto: miden "texto casi idéntico", no "copia".
+* El TF-IDF está pensado para inglés. Las descripciones en otros idiomas quedan casi vacías y pueden dar `tfidf_cos = 1` entre textos distintos. En la primera corrida con todo Steam eso volvió falsa la mitad de los positivos débiles; por eso ahora se exige además `emb_cos ≥ 0.80` y un mínimo de términos (`MIN_TERMINOS`).
 * Se usan pocas imágenes por juego (header y unas pocas capturas). No se analizan videos ni jugabilidad.
 * Los juegos con descripción muy corta se descartan.
 * La validación por grupos agrupa por familias de positivos; un juego puede aparecer en pares negativos de distintos grupos.
