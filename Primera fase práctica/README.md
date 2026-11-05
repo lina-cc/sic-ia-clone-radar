@@ -78,6 +78,8 @@ Permiten configurar la app sin cambiar el código. Son las que usa Hugging Face 
 | `HF_TOKEN` | Token de lectura de Hugging Face, necesario si el dataset es privado. |
 | `GRADIO_SERVER_NAME` | Dirección donde escucha la app. Por defecto `127.0.0.1` (solo tu computador). Spaces usa `0.0.0.0`. |
 | `GRADIO_SERVER_PORT` | Puerto. Por defecto `7860`. |
+| `FAIRPLAY_CLAVE` | Si está definida, la app pide usuario y contraseña (útil al publicarla en un servidor). |
+| `FAIRPLAY_USUARIO` | Usuario para entrar cuando hay `FAIRPLAY_CLAVE`. Por defecto `fairplay`. |
 
 ## Publicar la demo
 

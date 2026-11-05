@@ -100,3 +100,14 @@ def test_encabezado_muestra_el_logo_completo():
     assert html.count('width="56" height="56"') == 1
     assert 'viewBox="0 0 128 128"' in html and "FairPlay" in html
     assert (app.ASSETS / "favicon.png").exists()
+
+
+def test_credenciales_solo_si_hay_clave(monkeypatch):
+    import app
+    monkeypatch.delenv("FAIRPLAY_CLAVE", raising=False)
+    monkeypatch.delenv("FAIRPLAY_USUARIO", raising=False)
+    assert app.credenciales() is None
+    monkeypatch.setenv("FAIRPLAY_CLAVE", "secreta")
+    assert app.credenciales() == ("fairplay", "secreta")
+    monkeypatch.setenv("FAIRPLAY_USUARIO", "equipo")
+    assert app.credenciales() == ("equipo", "secreta")

@@ -1,0 +1,15 @@
+[Unit]
+Description=FairPlay AI (app Gradio)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USUARIO__
+WorkingDirectory=/opt/fairplay/app
+EnvironmentFile=/etc/fairplay.env
+ExecStart=/opt/fairplay/venv/bin/python app.py --casos /opt/fairplay/casos/casos_guardados.csv
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
