@@ -175,6 +175,8 @@ Opciones útiles de la configuración:
 
 Lo que ya se calculó queda guardado en `MyDrive/fairplay/salidas/` (catálogo de Kaggle reducido, embeddings, vecinos, imágenes procesadas) y **no se recalcula** en la siguiente corrida mientras el catálogo no cambie. Por eso la primera corrida es la lenta (descarga del dataset, embeddings e imágenes) y las siguientes son mucho más rápidas.
 
+**Si la app dice que el modelo se entrenó con otra versión de scikit-learn:** el paquete se exportó con una versión distinta a la de `Primera fase práctica/requirements.txt`. La primera celda del notebook instala la misma versión que la app; vuelve a correr el notebook y copia el paquete nuevo. Un modelo guardado con una versión no siempre funciona con otra (el error típico es `'SimpleImputer' object has no attribute '_fill_dtype'`).
+
 **Si Colab dice que se acabó la RAM:** *Entorno de ejecución → Reiniciar sesión* y volver a *Ejecutar todo*. No relances *Ejecutar todo* sobre una sesión que ya corrió el notebook: los datos viejos siguen en memoria y se duplican.
 
 ### App en local

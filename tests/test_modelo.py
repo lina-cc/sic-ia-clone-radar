@@ -20,6 +20,25 @@ def test_rechaza_un_modelo_con_senales_desconocidas(paquete_modelo):
         BuscadorModelo(paquete_modelo)
 
 
+def test_rechaza_un_modelo_de_otra_version_de_sklearn(paquete_modelo, monkeypatch):
+    import warnings
+
+    import modelo
+    from sklearn.exceptions import InconsistentVersionWarning
+
+    cargar = joblib.load
+
+    def cargar_con_aviso(ruta):
+        # Lo mismo que hace scikit-learn al abrir un modelo guardado con otra versión
+        warnings.warn(InconsistentVersionWarning(estimator_name="SimpleImputer",
+                                                 current_sklearn_version="9.9", original_sklearn_version="1.6.1"))
+        return cargar(ruta)
+
+    monkeypatch.setattr(modelo.joblib, "load", cargar_con_aviso)
+    with pytest.raises(RuntimeError, match="scikit-learn 1.6.1"):
+        BuscadorModelo(paquete_modelo)
+
+
 def test_el_clon_es_el_primer_candidato(paquete_modelo):
     m = BuscadorModelo(paquete_modelo)
     res = m.candidatos(m.tfidf.buscar("Escape the Walls"), k=3)

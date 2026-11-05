@@ -359,7 +359,11 @@ def cargar_modelo(carpeta: str | Path):
         print(f"Sin modelo entrenado en {carpeta}: la pestaña 'Modelo entrenado' explicará cómo generarlo.")
         return None
     print("Cargando el modelo entrenado...")
-    m = BuscadorModelo(carpeta)
+    try:
+        m = BuscadorModelo(carpeta)
+    except RuntimeError as e:  # versión de scikit-learn distinta a la del notebook
+        print(f"\nNo se pudo cargar el modelo: {e}\nLa pestaña del modelo quedará desactivada.\n")
+        return None
     print(f"Modelo listo: {len(m.df)} juegos en su catálogo.")
     return m
 

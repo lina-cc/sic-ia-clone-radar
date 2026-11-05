@@ -39,6 +39,31 @@ NOMBRES_SENALES = {
 }
 
 
+def cargar_artefacto(ruta: Path) -> dict:
+    """Carga modelo_pares.joblib y exige la misma versión de scikit-learn que lo entrenó.
+
+    Un modelo guardado con una versión de scikit-learn puede fallar con otra (por ejemplo
+    "'SimpleImputer' object has no attribute '_fill_dtype'"), así que se detiene antes con
+    un mensaje que dice qué versión instalar.
+    """
+    import warnings
+
+    import sklearn
+    from sklearn.exceptions import InconsistentVersionWarning
+
+    with warnings.catch_warnings(record=True) as avisos:
+        warnings.simplefilter("always", InconsistentVersionWarning)
+        art = joblib.load(ruta)
+    distintas = {a.message.original_sklearn_version for a in avisos
+                 if issubclass(a.category, InconsistentVersionWarning)}
+    if distintas:
+        raise RuntimeError(
+            f"El modelo se entrenó con scikit-learn {', '.join(sorted(distintas))} y aquí está instalada "
+            f"la {sklearn.__version__}. Vuelve a exportar el paquete con el notebook (que instala la misma "
+            "versión que requirements.txt) o instala esa versión: pip install scikit-learn==<versión>.")
+    return art
+
+
 def nombre_legible(senal: str) -> str:
     """'missingindicator_img_cos' -> 'Sin dato: Imágenes parecidas (CLIP)'."""
     if senal.startswith("missingindicator_"):
@@ -61,7 +86,7 @@ class BuscadorModelo:
                 "Corre la sección 11 del notebook FairPlay_AI_Clasificador_Pares.ipynb y copia "
                 "la carpeta salidas/paquete_app a esta ubicación.")
 
-        art = joblib.load(carpeta / "modelo_pares.joblib")
+        art = cargar_artefacto(carpeta / "modelo_pares.joblib")
         self.modelo_A, self.modelo_B = art["modelo_A"], art.get("modelo_B")
         self.FEAT_A, self.FEAT_B = art["FEAT_A"], art["FEAT_B"]
         self.config = art.get("config", {})
