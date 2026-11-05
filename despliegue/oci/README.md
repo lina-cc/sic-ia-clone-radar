@@ -42,11 +42,28 @@ sudo systemctl restart fairplay                        # reiniciar la app
 sudo bash /opt/fairplay/repo/despliegue/oci/configurar_secretos.sh   # cambiar token o contraseña
 ```
 
-Para bajar los casos marcados al computador:
+## Ciclo para reentrenar (desde Windows, en esta carpeta)
 
-```bash
-scp -i <clave-privada> ubuntu@<IP>:/opt/fairplay/casos/casos_guardados.csv .
-```
+El servidor solo muestra la app; el entrenamiento sigue en Colab.
+
+1. El equipo marca casos en la app publicada (no en la demo de Colab, que guarda en otro archivo).
+2. Bajar los casos al computador:
+
+   ```powershell
+   .\bajar_casos.ps1 -Ip <IP>
+   ```
+
+   Deja `casos\casos_guardados_<fecha>.csv`. Subirlo a Drive como `MyDrive/fairplay/data/casos_guardados.csv`.
+3. Correr `FairPlay_AI_Clasificador_Pares.ipynb` en Colab y subir la carpeta `modelo/` nueva al dataset de Hugging Face.
+4. Hacer que el servidor use el modelo nuevo:
+
+   ```powershell
+   .\actualizar_modelo.ps1 -Ip <IP>
+   ```
+
+   Descarga el modelo, reinicia la app y dice si quedó con el Modelo A o B. Si el modelo nuevo no carga, vuelve solo al anterior.
+
+Ambos usan la clave `~\.ssh\oci_fairplay.key`; otra ruta se indica con `-Clave`.
 
 ## Cuidados
 
