@@ -32,6 +32,7 @@ import pandas as pd
 from similitud import COLUMNAS_TABLA, BuscadorTfidf
 
 ETIQUETAS = ["Similar", "No similar", "Posible copia"]
+ASSETS = Path(__file__).parent / "assets"
 COLUMNAS_CASOS = ["fecha", "anotador", "tipo", "consulta", "juego_comparado",
                   "puntaje", "etiqueta", "comentario"]
 ANCHOS = ["20%", "9%", "16%", "11%", "36%", "8%"]   # Juego, Puntaje, Géneros, Fecha, Términos, Steam
@@ -72,6 +73,18 @@ EXPLICACION_MODELO = (
     "vacío = no había imagen procesada para ese juego. "
     "Solo busca juegos que estén en el catálogo del modelo."
 )
+
+
+def encabezado() -> str:
+    """Logo y nombre de la app (el SVG va en línea para no depender de rutas servidas)."""
+    logo = (ASSETS / "logo-icono.svg").read_text(encoding="utf-8")
+    logo = logo.replace('width="128" height="128"', 'width="56" height="56"', 1)   # solo el marco exterior
+    return (
+        '<div style="display:flex;align-items:center;gap:14px;margin:4px 0 2px">'
+        f'{logo}<div><div style="font-size:26px;font-weight:700;line-height:1.1">'
+        'FairPlay <span style="color:#193EB0">AI</span></div>'
+        '<div style="font-size:13px;letter-spacing:2px;opacity:.7">SIMILITUD ENTRE VIDEOJUEGOS</div>'
+        '</div></div>')
 
 
 def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Blocks:
@@ -154,7 +167,7 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Bloc
  
     # ---- interfaz --------------------------------------------------------
     with gr.Blocks(title="FairPlay AI · Similitud entre videojuegos") as demo:
-        gr.Markdown("# FairPlay AI: similitud entre videojuegos")
+        gr.HTML(encabezado())
         gr.Markdown("Las tres primeras pestañas usan la **línea base TF-IDF** (solo palabras). "
                     "La pestaña **Modelo entrenado** combina texto, imágenes y metadatos.")
         gr.Markdown(AVISO)
@@ -409,7 +422,7 @@ def main() -> None:
     # En local escucha solo en 127.0.0.1; en Spaces la variable GRADIO_SERVER_NAME vale 0.0.0.0
     crear_app(buscador, Path(args.casos), modelo).launch(
         share=args.share, server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
-        server_port=args.puerto)
+        server_port=args.puerto, favicon_path=str(ASSETS / "favicon.png"))
  
  
 if __name__ == "__main__":

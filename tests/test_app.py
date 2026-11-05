@@ -92,3 +92,11 @@ def test_sin_parquet_de_la_linea_base_usa_el_catalogo_del_modelo(paquete_modelo,
     assert app.elegir_datos("otro.parquet", str(paquete_modelo)) == "otro.parquet"
     # Sin modelo ni dataset, se mantiene la ruta de siempre (y la app explica qué falta)
     assert app.elegir_datos(app.DATOS_POR_DEFECTO, str(tmp_path / "nada")) == app.DATOS_POR_DEFECTO
+
+
+def test_encabezado_muestra_el_logo_completo():
+    html = app.encabezado()
+    # Solo el marco exterior cambia de tamaño; las formas internas mantienen el dibujo original
+    assert html.count('width="56" height="56"') == 1
+    assert 'viewBox="0 0 128 128"' in html and "FairPlay" in html
+    assert (app.ASSETS / "favicon.png").exists()

@@ -1,4 +1,8 @@
-# FairPlay AI · SIC IA Clone Radar 🎮🔍
+<p align="center">
+  <img src="docs/img/logo.svg" alt="FairPlay AI · Clone Radar" width="420">
+</p>
+
+# FairPlay AI · SIC IA Clone Radar
 
 **Sistema que prioriza qué pares de juegos de Steam vale la pena que revise una persona por posible réplica, combinando su descripción, sus imágenes y sus metadatos.**
 
@@ -207,6 +211,7 @@ sic-ia-clone-radar/
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Línea base TF-IDF + similitud coseno.
 │   ├── demo.ps1                          # Un clic para abrir la app con enlace público (Windows).
+│   ├── assets/                           # Logo e ícono de la app.
 │   ├── LEEME_PROBADORES.md               # Guía para quienes prueban la app.
 │   ├── README.md                         # Instrucciones de la app.
 │   ├── requirements.txt                  # Dependencias con versiones fijas (Python 3.12).
@@ -214,7 +219,7 @@ sic-ia-clone-radar/
 ├── docs/
 │   ├── GUIA_TECNICA.md                   # Documentación técnica completa (stack, señales, modelo, métricas).
 │   ├── GUIA_ETIQUETADO.md                # Criterios y flujo para etiquetar pares.
-│   └── img/                              # Imágenes de este README.
+│   └── img/                              # Logo e imágenes de este README.
 ├── tests/                                # Tests automáticos (pytest).
 ├── Documentos/                           # Informe, pitch y hoja de trabajo del equipo.
 ├── .github/workflows/tests.yml           # Corre los tests en cada push (GitHub Actions).
