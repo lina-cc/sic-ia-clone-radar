@@ -439,6 +439,18 @@ def cargar_modelo(carpeta: str | Path):
 DATOS_POR_DEFECTO = "data/juegos_texto_en.parquet"
 
 
+def credenciales() -> tuple[str, str] | None:
+    """Usuario y contraseña para entrar a la app, si FAIRPLAY_CLAVE está definida.
+
+    Sirve para publicarla en un servidor (por ejemplo OCI) sin que cualquiera pueda marcar casos.
+    El usuario es FAIRPLAY_USUARIO, o "fairplay" si no está definido. Sin FAIRPLAY_CLAVE, la app queda abierta.
+    """
+    clave = os.environ.get("FAIRPLAY_CLAVE", "").strip()
+    if not clave:
+        return None
+    return os.environ.get("FAIRPLAY_USUARIO", "fairplay").strip() or "fairplay", clave
+
+
 def elegir_datos(datos: str, carpeta_modelo: str) -> str:
     """Si no se indicó otro parquet y el de siempre no está, usa el catálogo del modelo.
 
@@ -474,7 +486,8 @@ def main() -> None:
     crear_app(buscador, Path(args.casos), modelo).launch(
         share=args.share, server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
         server_port=args.puerto, favicon_path=str(ASSETS / "favicon.png"),
-        theme=vista.TEMA, css=vista.CSS)
+        theme=vista.TEMA, css=vista.CSS, auth=credenciales(),
+        auth_message="FairPlay AI: ingresa el usuario y la contraseña del equipo.")
  
  
 if __name__ == "__main__":
