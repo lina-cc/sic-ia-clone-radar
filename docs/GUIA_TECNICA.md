@@ -67,7 +67,7 @@ El ciclo de la derecha es importante: **cada par que el equipo etiqueta mejora e
 | **rapidfuzz** | Parecido entre títulos | Muy rápido y tolera palabras reordenadas ("Escape the Walls" vs "Walls Escape"). |
 | **requests** | Descargar imágenes y consultar la API de la tienda de Steam | Simple y suficiente. |
 | **kagglehub** | Descargar el dataset de Steam de Kaggle | Oficial de Kaggle; funciona directo en Colab. |
-| **Gradio** | Interfaz web de la app | Visto en la clase 4; se despliega gratis en Hugging Face Spaces. |
+| **Gradio** | Interfaz web de la app | Visto en la clase 4; con `--share` entrega un enlace público temporal. |
 | **pytest + GitHub Actions** | Tests automáticos | Detectan si un cambio rompe algo antes de presentarlo. Suman en "madurez del software" de la pauta. |
 
 ### Lo que se evaluó y se dejó fuera (a propósito)
@@ -130,7 +130,7 @@ Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se
 
 ### 6.5 Cómo llega el modelo a la app
 
-El notebook hace el trabajo pesado (embeddings de texto con un modelo de lenguaje, descarga de imágenes y CLIP) y al final **exporta un paquete** con todo ya calculado. La app solo carga ese paquete, así que corre en cualquier computador o en Hugging Face Spaces gratis, sin GPU.
+El notebook hace el trabajo pesado (embeddings de texto con un modelo de lenguaje, descarga de imágenes y CLIP) y al final **exporta un paquete** con todo ya calculado. La app solo carga ese paquete, así que corre en cualquier computador (o en Colab) sin GPU.
 
 ```mermaid
 flowchart LR
@@ -207,21 +207,31 @@ Deben pasar todos. En GitHub se corren solos en cada push (pestaña **Actions**)
 
 ---
 
-## 8. Publicar la app en Hugging Face Spaces
+## 8. Publicar la demo
 
-Así la demo tiene un enlace permanente, sin depender de que alguien tenga su computador encendido.
+Desde 2026, Hugging Face **cobra** por los Spaces con Gradio (requieren la suscripción PRO); solo los Spaces estáticos son gratis. Por eso la demo se publica con un **enlace temporal de Gradio** (`https://….gradio.live`), que funciona mientras la app esté corriendo (hasta una semana).
 
-1. **Subir los datos a un dataset privado.** En huggingface.co: *New → Dataset*, marcarlo **privado**, y subir los cuatro archivos de `salidas/paquete_app` dentro de una carpeta `modelo/` del dataset. Con eso basta: el catálogo del modelo (`modelo/catalogo.parquet`) sirve también para las pestañas de la línea base.
-2. **Crear un token de lectura.** *Settings → Access Tokens → New token* (tipo *Read*).
-3. **Crear el Space.** *New → Space*, SDK **Gradio**.
-4. **Subir al Space** los archivos `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt` de `Primera fase práctica/`, más un `README.md` con la cabecera de Spaces (`sdk: gradio`, `sdk_version` igual a la de `requirements.txt`, `python_version: "3.12"`).
-5. **Configurar el Space** en *Settings → Variables and secrets*:
-   * Variable `FAIRPLAY_HF_DATASET` = `usuario/nombre-del-dataset`
-   * Variable `FAIRPLAY_DATOS` = `modelo/catalogo.parquet`
-   * Secreto `HF_TOKEN` = el token del paso 2
-6. El Space instala las dependencias y arranca. La app descarga el parquet y el modelo al iniciar (funciones `resolver_datos` y `cargar_modelo` en `app.py`).
+### 8.1 Opción recomendada: Colab (`FairPlay_AI_Demo.ipynb`)
 
-**Ojo:** en Spaces gratuitos el disco se borra al reiniciar, así que los casos guardados en la app se pierden. Para etiquetar, usen la app en local o descarguen el CSV antes de reiniciar.
+1. Abrir `FairPlay_AI_Demo.ipynb` en Colab (no necesita GPU).
+2. *Entorno de ejecución → Ejecutar todo* y aceptar el acceso a Drive.
+3. Abrir el enlace `gradio.live` que aparece al final y compartirlo.
+
+Lee el modelo desde `MyDrive/fairplay/salidas/paquete_app/` y guarda los casos marcados en `MyDrive/fairplay/data/casos_guardados.csv`, así que **las etiquetas que el equipo ponga en la demo le llegan al notebook principal**.
+
+### 8.2 Opción local: `demo.ps1` (Windows)
+
+Desde `Primera fase práctica/`, con el paquete del modelo copiado en `modelo/`:
+
+```powershell
+.\demo.ps1
+```
+
+La primera vez crea el entorno `.venv` e instala las dependencias. **Ojo:** Windows Defender puede bloquear el programa del túnel de Gradio (`frpc`) y entonces aparece *"Could not create share link"*. En ese caso, usen la opción de Colab, o permitan el archivo en *Seguridad de Windows → Protección contra virus y amenazas → Historial de protección*.
+
+### 8.3 Si el equipo contrata Hugging Face PRO
+
+La app ya está preparada para un Space: basta un **dataset privado** con la carpeta `modelo/` (los cuatro archivos del paquete), y en el Space las variables `FAIRPLAY_HF_DATASET` (nombre del dataset) y `FAIRPLAY_DATOS=modelo/catalogo.parquet`, más el secreto `HF_TOKEN` (token de lectura). La app descarga lo que falte al iniciar (`resolver_datos` y `cargar_modelo` en `app.py`). En Spaces gratuitos o de pago el disco se borra al reiniciar: los casos guardados ahí se pierden.
 
 ---
 

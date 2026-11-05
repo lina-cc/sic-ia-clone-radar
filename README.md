@@ -19,9 +19,11 @@ Este repositorio contiene la investigación, la documentación y el prototipo de
 ```plaintext
 sic-ia-clone-radar/
 ├── FairPlay_AI_Clasificador_Pares.ipynb  # ⭐ Notebook principal: datos reales de Steam + modelo entrenado.
+├── FairPlay_AI_Demo.ipynb               # Abre la app en Colab con un enlace público temporal.
 ├── FairPlay_AI_DBSCAN.ipynb              # Primer experimento con datos simulados (antecedente).
 ├── Primera fase práctica/
-│   ├── app.py                            # App web en Gradio (también desplegable en Hugging Face Spaces).
+│   ├── app.py                            # App web en Gradio.
+│   ├── demo.ps1                          # Abre la app con enlace público temporal (Windows).
 │   ├── modelo.py                         # Usa el modelo entrenado: candidatos y explicación de pares.
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Lógica de la línea base TF-IDF + similitud coseno.
@@ -105,7 +107,9 @@ cd "Primera fase práctica"
 python app.py
 ```
 
-Más detalles, incluido el despliegue en Hugging Face Spaces, en [`Primera fase práctica/README.md`](Primera%20fase%20práctica/README.md).
+**Demo pública:** abrir [`FairPlay_AI_Demo.ipynb`](FairPlay_AI_Demo.ipynb) en Colab y *Ejecutar todo*; entrega un enlace `gradio.live` para compartir (ver [Guía técnica, sección 8](docs/GUIA_TECNICA.md#8-publicar-la-demo)). Hugging Face Spaces con Gradio ahora requiere PRO.
+
+Más detalles en [`Primera fase práctica/README.md`](Primera%20fase%20práctica/README.md).
 
 ---
 

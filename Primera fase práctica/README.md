@@ -78,15 +78,14 @@ Permiten configurar la app sin cambiar el código. Son las que usa Hugging Face 
 | `GRADIO_SERVER_NAME` | Dirección donde escucha la app. Por defecto `127.0.0.1` (solo tu computador). Spaces usa `0.0.0.0`. |
 | `GRADIO_SERVER_PORT` | Puerto. Por defecto `7860`. |
 
-## Publicar en Hugging Face Spaces
+## Publicar la demo
 
-Resumen (los pasos completos están en la [Guía técnica](../docs/GUIA_TECNICA.md#8-publicar-la-app-en-hugging-face-spaces)):
+Hugging Face Spaces con Gradio ahora requiere la suscripción PRO, así que la demo se comparte con un **enlace temporal de Gradio**:
 
-1. Subir a un **dataset privado** de Hugging Face, dentro de una carpeta `modelo/`, los cuatro archivos del paquete del modelo.
-2. Crear un **Space** con SDK Gradio y subir `app.py`, `similitud.py`, `senales.py`, `modelo.py` y `requirements.txt`.
-3. En *Settings → Variables and secrets* del Space: las variables `FAIRPLAY_HF_DATASET` (nombre del dataset) y `FAIRPLAY_DATOS=modelo/catalogo.parquet`, y el secreto `HF_TOKEN`.
+* **Colab (recomendado):** abrir `FairPlay_AI_Demo.ipynb` y *Ejecutar todo*.
+* **Windows:** `.\demo.ps1` en esta carpeta (si Windows Defender bloquea `frpc`, usar Colab).
 
-En Spaces gratuitos el disco se borra al reiniciar: los casos guardados ahí se pierden.
+Detalles, y cómo usar un Space si el equipo contrata PRO, en la [Guía técnica](../docs/GUIA_TECNICA.md#8-publicar-la-demo).
 
 ## Casos guardados
 

@@ -82,3 +82,13 @@ def test_cargar_modelo_completa_una_carpeta_a_medias(paquete_modelo, monkeypatch
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", falso_hf_hub_download)
     assert app.cargar_modelo(paquete_modelo) is not None
     assert pedidos == [f"{paquete_modelo.name}/modelo_pares.joblib"]
+
+
+def test_sin_parquet_de_la_linea_base_usa_el_catalogo_del_modelo(paquete_modelo, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("FAIRPLAY_HF_DATASET", raising=False)
+    assert app.elegir_datos(app.DATOS_POR_DEFECTO, str(paquete_modelo)) == (paquete_modelo / "catalogo.parquet").as_posix()
+    # Si se pide otro parquet a propósito, se respeta
+    assert app.elegir_datos("otro.parquet", str(paquete_modelo)) == "otro.parquet"
+    # Sin modelo ni dataset, se mantiene la ruta de siempre (y la app explica qué falta)
+    assert app.elegir_datos(app.DATOS_POR_DEFECTO, str(tmp_path / "nada")) == app.DATOS_POR_DEFECTO

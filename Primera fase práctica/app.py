@@ -372,15 +372,32 @@ def cargar_modelo(carpeta: str | Path):
     return m
 
 
+DATOS_POR_DEFECTO = "data/juegos_texto_en.parquet"
+
+
+def elegir_datos(datos: str, carpeta_modelo: str) -> str:
+    """Si no se indicó otro parquet y el de siempre no está, usa el catálogo del modelo.
+
+    Así basta con copiar el paquete del modelo (o tener FAIRPLAY_HF_DATASET) para abrir la app.
+    """
+    catalogo = Path(carpeta_modelo) / "catalogo.parquet"
+    if datos == DATOS_POR_DEFECTO and not Path(datos).exists() and (
+            catalogo.exists() or os.environ.get("FAIRPLAY_HF_DATASET")):
+        return catalogo.as_posix()
+    return datos
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--datos", default=os.environ.get("FAIRPLAY_DATOS", "data/juegos_texto_en.parquet"))
+    p.add_argument("--datos", default=os.environ.get("FAIRPLAY_DATOS", DATOS_POR_DEFECTO),
+                   help="parquet de la línea base (si falta, se usa el catálogo del modelo)")
     p.add_argument("--modelo", default=os.environ.get("FAIRPLAY_MODELO", "modelo"),
                    help="carpeta con el paquete exportado por el notebook (sección 11)")
     p.add_argument("--casos", default="casos/casos_guardados.csv")
     p.add_argument("--puerto", type=int, default=int(os.environ.get("GRADIO_SERVER_PORT", 7860)))
     p.add_argument("--share", action="store_true", help="enlace público temporal")
     args = p.parse_args()
+    args.datos = elegir_datos(args.datos, args.modelo)
 
     print("Cargando datos y ajustando TF-IDF (la primera vez tarda; luego usa caché)...")
     try:
