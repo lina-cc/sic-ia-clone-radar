@@ -1,0 +1,3 @@
+# Para desarrollar y correr los tests:  pip install -r requirements-dev.txt
+-r "Primera fase práctica/requirements.txt"
+pytest==9.2.0

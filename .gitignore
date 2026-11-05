@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Data and caches
+# Data and caches (datos de Steam y modelo exportado: no se publican)
+modelo/
 *.joblib
 *.parquet
 data/
@@ -20,3 +21,12 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# Material del curso: tiene derechos reservados (Samsung) o datos de otras personas
+# (lista de equipos, enlace de Meet). Está en el Drive del curso; no se publica aquí.
+Documentos/Proyecto Final/
+Documentos/SIC2026_IA_Documento_Maestro.pdf
+
+# Descargas de Drive (paquetes del modelo comprimidos)
+*.zip
+.gradio/

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>FairPlay AI</title>
+  <defs>
+    <clipPath id="marco"><rect width="128" height="128" rx="30"/></clipPath>
+  </defs>
+  <g clip-path="url(#marco)">
+    <rect width="128" height="128" fill="#193EB0"/>
+    <!-- radar -->
+    <circle cx="64" cy="64" r="46" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="3"/>
+    <circle cx="64" cy="64" r="29" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="3"/>
+    <circle cx="64" cy="64" r="12" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="3"/>
+    <!-- barrido -->
+    <path d="M64,64 L64,10 A54,54 0 0 1 110.8,37 Z" fill="#E87A1A" fill-opacity="0.9"/>
+    <!-- el par detectado -->
+    <line x1="44" y1="78" x2="86" y2="50" stroke="#FFFFFF" stroke-width="3.5" stroke-dasharray="6 5" stroke-linecap="round"/>
+    <rect x="33" y="67" width="22" height="22" rx="6" fill="#FFFFFF"/>
+    <rect x="75" y="39" width="22" height="22" rx="6" fill="#FFFFFF"/>
+    <rect x="40" y="74" width="8" height="8" rx="2" fill="#193EB0"/>
+    <rect x="82" y="46" width="8" height="8" rx="2" fill="#193EB0"/>
+  </g>
+</svg>

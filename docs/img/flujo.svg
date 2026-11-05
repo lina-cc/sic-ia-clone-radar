@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 330" width="1000" height="330" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="330" fill="#ffffff"/>
+
+  <!-- Paso 1 -->
+  <g>
+    <rect x="15" y="40" width="165" height="120" rx="12" fill="#eef4ff" stroke="#2a6fdb" stroke-width="1.5"/>
+    <text x="97" y="68" text-anchor="middle" font-size="12" fill="#2a6fdb" font-weight="700">1 · DATOS</text>
+    <text x="97" y="93" text-anchor="middle" font-size="14" fill="#111" font-weight="600">Catálogo de Steam</text>
+    <text x="97" y="115" text-anchor="middle" font-size="12" fill="#444">137.976 juegos</text>
+    <text x="97" y="133" text-anchor="middle" font-size="12" fill="#444">texto · imágenes</text>
+    <text x="97" y="150" text-anchor="middle" font-size="12" fill="#444">tags · fechas</text>
+  </g>
+  <line x1="182" y1="100" x2="210" y2="100" stroke="#6b7280" stroke-width="1.6" marker-end="url(#f)"/>
+
+  <!-- Paso 2 -->
+  <g>
+    <rect x="213" y="40" width="165" height="120" rx="12" fill="#eef4ff" stroke="#2a6fdb" stroke-width="1.5"/>
+    <text x="295" y="68" text-anchor="middle" font-size="12" fill="#2a6fdb" font-weight="700">2 · CANDIDATOS</text>
+    <text x="295" y="93" text-anchor="middle" font-size="14" fill="#111" font-weight="600">Vecinos cercanos</text>
+    <text x="295" y="115" text-anchor="middle" font-size="12" fill="#444">por palabras (TF-IDF)</text>
+    <text x="295" y="133" text-anchor="middle" font-size="12" fill="#444">y por significado</text>
+    <text x="295" y="150" text-anchor="middle" font-size="12" fill="#444">(embeddings)</text>
+  </g>
+  <line x1="380" y1="100" x2="408" y2="100" stroke="#6b7280" stroke-width="1.6" marker-end="url(#f)"/>
+
+  <!-- Paso 3 -->
+  <g>
+    <rect x="411" y="40" width="165" height="120" rx="12" fill="#eef4ff" stroke="#2a6fdb" stroke-width="1.5"/>
+    <text x="493" y="68" text-anchor="middle" font-size="12" fill="#2a6fdb" font-weight="700">3 · SEÑALES</text>
+    <text x="493" y="93" text-anchor="middle" font-size="14" fill="#111" font-weight="600">8 por cada par</text>
+    <text x="493" y="115" text-anchor="middle" font-size="12" fill="#444">texto · imagen (CLIP)</text>
+    <text x="493" y="133" text-anchor="middle" font-size="12" fill="#444">hash · título · tags</text>
+    <text x="493" y="150" text-anchor="middle" font-size="12" fill="#444">fechas · estudio</text>
+  </g>
+  <line x1="578" y1="100" x2="606" y2="100" stroke="#6b7280" stroke-width="1.6" marker-end="url(#f)"/>
+
+  <!-- Paso 4 -->
+  <g>
+    <rect x="609" y="40" width="165" height="120" rx="12" fill="#fff4e8" stroke="#f08a24" stroke-width="1.5"/>
+    <text x="691" y="68" text-anchor="middle" font-size="12" fill="#c46a12" font-weight="700">4 · MODELO</text>
+    <text x="691" y="93" text-anchor="middle" font-size="14" fill="#111" font-weight="600">Regresión logística</text>
+    <text x="691" y="115" text-anchor="middle" font-size="12" fill="#444">probabilidad de que</text>
+    <text x="691" y="133" text-anchor="middle" font-size="12" fill="#444">el par merezca</text>
+    <text x="691" y="150" text-anchor="middle" font-size="12" fill="#444">revisión humana</text>
+  </g>
+  <line x1="776" y1="100" x2="804" y2="100" stroke="#6b7280" stroke-width="1.6" marker-end="url(#f)"/>
+
+  <!-- Paso 5 -->
+  <g>
+    <rect x="807" y="40" width="178" height="120" rx="12" fill="#ecf8f0" stroke="#1f9d55" stroke-width="1.5"/>
+    <text x="896" y="68" text-anchor="middle" font-size="12" fill="#1f7a45" font-weight="700">5 · APP</text>
+    <text x="896" y="93" text-anchor="middle" font-size="14" fill="#111" font-weight="600">Candidatos ordenados</text>
+    <text x="896" y="115" text-anchor="middle" font-size="12" fill="#444">con explicación de</text>
+    <text x="896" y="133" text-anchor="middle" font-size="12" fill="#444">cada señal e imágenes</text>
+    <text x="896" y="150" text-anchor="middle" font-size="12" fill="#444">lado a lado</text>
+  </g>
+
+  <!-- Ciclo de etiquetas -->
+  <path d="M896,162 L896,250 L705,250" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#f)"/>
+  <rect x="500" y="215" width="200" height="70" rx="12" fill="#f5f3ff" stroke="#7c5cd6" stroke-width="1.5"/>
+  <text x="600" y="243" text-anchor="middle" font-size="14" fill="#111" font-weight="600">Revisión humana</text>
+  <text x="600" y="265" text-anchor="middle" font-size="12" fill="#444">el equipo etiqueta pares</text>
+  <path d="M640,213 L640,188 L680,188 L680,164" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#f)"/>
+  <text x="780" y="275" text-anchor="middle" font-size="11.5" fill="#666" font-style="italic">cada etiqueta</text>
+  <text x="780" y="291" text-anchor="middle" font-size="11.5" fill="#666" font-style="italic">mejora el modelo</text>
+
+  <text x="15" y="315" font-size="12" fill="#6b7280">La salida no dice "es una copia": ordena qué pares vale la pena que revise una persona.</text>
+</svg>
