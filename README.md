@@ -309,7 +309,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-72 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
+74 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -395,6 +395,8 @@ Lista completa en la [Guía técnica §11](docs/GUIA_TECNICA.md#11-limitaciones-
 | App con el modelo entrenado, explicación y registro de casos | nov 2026 | ✅ Listo |
 | Demo pública (Colab + enlace de Gradio) | nov 2026 | ✅ Lista |
 | App publicada 24/7 con HTTPS y contraseña (Oracle Cloud) | nov 2026 | ✅ Lista |
+| App rediseñada para etiquetar: cola de revisión, progreso del equipo, saltar y deshacer | nov 2026 | ✅ Lista |
+| Búsqueda de pares sospechosos en las reseñas de los usuarios | nov 2026 | ✅ Primera corrida hecha |
 | Lote de 100 pares para etiquetar | nov 2026 | ✅ Generado · 🔄 etiquetado en curso |
 | **Modelo base funcionando** | 24 nov | ✅ Modelo A |
 | Modelo B y evaluación con etiquetas humanas | 27 nov | ⏳ Espera las etiquetas |

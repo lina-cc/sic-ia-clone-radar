@@ -1,66 +1,63 @@
-# Probar la app de similitud entre videojuegos
+# Probar la app de FairPlay AI
 
-Toma unos 10 minutos la primera vez, y menos de 1 minuto las siguientes.
-Lo que pruebas: dado un juego (o una descripción), la app muestra los juegos más
-parecidos según su descripción y las palabras que explican el parecido.
+Guía corta para quien va a **probar la app o etiquetar pares** por primera vez. No hay que instalar nada: la app ya está publicada.
+
+> **Similitud no es plagio.** La app ordena pares de juegos para que una persona los revise. No acusa a nadie.
 
 ## Qué necesitas
 
-- La carpeta de la app (esta).
-- El archivo de datos `juegos_texto_en.parquet` dentro de la carpeta `data/`.
-  Si ya está ahí, no hagas nada. Si no, pídeselo a [NOMBRE] y ponlo en esa carpeta
-  (créala si no existe).
-- Los datos son solo para el grupo: no los subas a ningún sitio público ni a un
-  repositorio abierto.
+- Un navegador (computador o celular).
+- El **enlace** de la app y el **usuario y la contraseña** del equipo. Pídelos por el canal privado del grupo; no se publican en el repositorio.
 
-## Instalación (una sola vez)
+## Primeros pasos (1 minuto)
 
-Abre una terminal en esta carpeta (en Windows, el «Anaconda Prompt») y elige UNA opción.
+1. Abre el enlace e ingresa con el usuario y la contraseña del equipo.
+2. Escribe **tu nombre** en el cuadro de arriba. El navegador lo recuerda, así que solo se hace una vez.
+3. Quédate en la pestaña **Etiquetar pares**: el primer par aparece solo.
 
-**Con Anaconda o Miniconda**
-
-```
-conda env create -f environment.yml
-conda activate similitud-juegos
-```
-
-**Sin conda (solo Python 3.11 o superior)**
-
-```
-python -m venv .venv
-.venv\Scripts\activate          (en Mac/Linux: source .venv/bin/activate)
-pip install -r requirements.txt
-```
-
-## Ejecutar
-
-```
-python app.py
-```
-
-La primera vez tarda un poco en preparar los datos. Cuando diga `Running on local URL`,
-abre esa dirección (normalmente http://127.0.0.1:7860) en el navegador.
-Para cerrar la app, vuelve a la terminal y presiona Ctrl+C.
+Sin nombre la app no guarda etiquetas: así sabemos quién revisó cada par.
 
 ## Qué probar
 
-1. **Buscar similares:** escribe un juego que conozcas bien (por ejemplo, un juego de una saga)
-   y mira si los resultados tienen sentido.
-2. **Comparar dos juegos:** pon dos juegos que creas muy parecidos y dos que no.
-3. **Texto nuevo:** pega la descripción de un juego (en inglés) y mira cuál sale primero.
+| Pestaña | Qué hace | Qué probar |
+|---|---|---|
+| **Etiquetar pares** | Muestra dos juegos lado a lado y pide una decisión. | Etiqueta unos 30 pares. Es lo que más ayuda al proyecto. |
+| **Buscar un juego** | Dado un juego, lista los candidatos más parecidos según el modelo. | Escribe un juego que conozcas bien y mira si los candidatos tienen sentido. |
+| **Comparar dos juegos** | Compara un par concreto y explica qué señales pesaron. | Prueba dos juegos que creas muy parecidos y dos que no. |
+| **Línea base (solo palabras)** | La versión simple, que solo compara descripciones. | Compara sus resultados con los del modelo. |
+| **Ayuda** | Resumen de cómo funciona todo. | Léela si te pierdes. |
 
-Solo hay juegos con descripción en inglés. Si un título no aparece, la app te sugiere nombres parecidos.
+Si un título no aparece, la app sugiere nombres parecidos. Solo están los juegos del catálogo con descripción en inglés.
 
-## Guardar casos
+## Cómo etiquetar un par
 
-Cuando un resultado te parezca interesante (acertado o equivocado), abre «Guardar un caso»,
-elige el resultado y márcalo como Similar, No similar o Posible copia. Escribe tu nombre
-arriba de todo para que sepamos quién lo marcó. No hace falta marcar muchos.
+1. Mira las imágenes y las descripciones de los dos juegos. Si dudas, abre *Abrir en Steam* para ver capturas y videos.
+2. Pulsa uno de los tres botones:
 
-Al terminar, envía a [NOMBRE] el archivo `casos/casos_guardados.csv`.
+   | Botón | Cuándo |
+   |---|---|
+   | **Posible copia** | Un especialista debería mirarlo: mismas capturas o arte, descripción copiada o traducida, el mismo juego con otro nombre. |
+   | **Similar** | Se parecen, pero hay una explicación normal: misma saga, mismo estudio, mismo género. |
+   | **No similar** | No se parecen de verdad. |
+
+3. El par se guarda y aparece el siguiente.
+
+- **Saltar este par:** si no puedes decidir. No se guarda nada.
+- **Deshacer el último:** si te equivocaste. Borra tu última etiqueta y vuelve a mostrar ese par.
+
+La app no muestra la probabilidad del modelo antes de que decidas, para no influir en tu respuesta. La barra de arriba indica cuántos pares llevas y cuántos le faltan al equipo.
+
+Los criterios completos, con ejemplos, están en la [Guía de etiquetado](../docs/GUIA_ETIQUETADO.md).
 
 ## Si algo falla
 
-- *«No encuentro el archivo de datos»*: falta poner el `.parquet` en `data/`.
-- *Error al instalar o ejecutar*: copia el mensaje completo y mándalo a [NOMBRE].
-- Recuerda: la similitud no es plagio. La app solo sugiere candidatos para revisión humana.
+| Problema | Qué hacer |
+|---|---|
+| El navegador pide usuario y contraseña una y otra vez | Revisa mayúsculas y espacios. Si sigue, pide la contraseña de nuevo por el canal del equipo. |
+| «Escribe tu nombre» al pulsar un botón | Falta el nombre en el cuadro de arriba. |
+| La página no carga | Espera un minuto y recarga: la app se reinicia cuando se actualiza. Si sigue caída, avisa al equipo. |
+| Un resultado se ve mal o raro | Anota los dos juegos y lo que esperabas, y mándalo al equipo. Los resultados equivocados también sirven. |
+
+## ¿Quieres correrla en tu computador?
+
+No hace falta para probar. Si igual quieres hacerlo, los pasos están en el [README de esta carpeta](README.md#requisitos).
