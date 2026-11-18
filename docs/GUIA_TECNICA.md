@@ -2,6 +2,10 @@
 
 Esta guía explica **qué hace el sistema, cómo está construido y por qué se eligió cada pieza**. Está pensada para que cualquier integrante del equipo (o un evaluador) pueda entender el proyecto sin haber escrito el código.
 
+**Otras guías:** [README](../README.md) (resumen y resultados) · [Guía de etiquetado](GUIA_ETIQUETADO.md) · [Probar la app](../Primera%20fase%20pr%C3%A1ctica/LEEME_PROBADORES.md) · [Servidor en OCI](../despliegue/oci/README.md)
+
+**Contenido:** [1. Qué hace](#1-qué-hace-el-sistema-en-una-frase) · [2. Mapa del repositorio](#2-mapa-del-repositorio) · [3. Flujo de datos](#3-flujo-de-datos) · [4. Stack](#4-el-stack-y-por-qué-se-eligió-cada-pieza) · [5. Señales](#5-las-señales-explicadas-sin-tecnicismos) · [6. Modelo](#6-el-modelo) · [7. Cómo correr cada parte](#7-cómo-correr-cada-parte) · [8. Publicar la demo](#8-publicar-la-demo) · [9. Datos](#9-datos-qué-se-puede-usar-y-qué-no) · [10. Git](#10-trabajo-en-equipo-con-git) · [11. Limitaciones](#11-limitaciones-conocidas) · [12. Glosario](#12-glosario)
+
 ---
 
 ## 1. Qué hace el sistema, en una frase
@@ -21,21 +25,22 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `Primera fase práctica/similitud.py` | Lógica de la línea base TF-IDF (sin interfaz). |
 | `Primera fase práctica/senales.py` | Calcula las señales de un par de juegos, igual que el notebook, para que la app pueda usar el modelo. |
 | `Primera fase práctica/modelo.py` | Carga el modelo entrenado (exportado por el notebook), busca candidatos y explica pares. |
-| `Primera fase práctica/app.py` | App web en Gradio: línea base TF-IDF (buscar, comparar, texto nuevo), pestaña **Modelo entrenado** y registro de casos etiquetados. |
+| `Primera fase práctica/app.py` | App web en Gradio: pestañas **Etiquetar pares**, **Buscar un juego**, **Comparar dos juegos**, **Línea base** y **Ayuda**, y registro de casos etiquetados. |
 | `Primera fase práctica/requirements.txt` | Dependencias de la app, con versiones fijas. |
 | `Primera fase práctica/vista.py` | Tema, estilos y tarjetas HTML de la interfaz. |
 | `FairPlay_AI_Resenas.ipynb` | Busca pares sospechosos en las reseñas de los usuarios y deja la lista en Drive. |
 | `Primera fase práctica/resenas.py` | Lógica de ese notebook: detectar expresiones de copia y qué otros juegos nombra una reseña. |
 | `Primera fase práctica/cola.py` | Cola de revisión: elige el próximo par sin etiquetar y cuenta el progreso de cada persona y del equipo. |
 | `despliegue/oci/` | Servidor gratuito en Oracle Cloud: instalación, HTTPS, contraseña y comandos para reentrenar. Ver su [README](../despliegue/oci/README.md). |
-| `tests/` | Tests automáticos de la línea base, las señales, el modelo, la app y la interfaz. |
+| `FairPlay_AI_Demo.ipynb` | Abre la app desde Colab con un enlace temporal (alternativa al servidor). |
+| `tests/` | Tests automáticos de la línea base, las señales, el modelo, la cola, las reseñas, la app y la interfaz. |
 | `.github/workflows/tests.yml` | Corre los tests en GitHub en cada push. |
 | `requirements-dev.txt` | Dependencias para desarrollar (app + pytest). |
 | `requirements-notebook.txt` | Dependencias del notebook si se corre fuera de Colab. |
-| `docs/` | Esta guía. |
+| `docs/` | Esta guía, la [Guía de etiquetado](GUIA_ETIQUETADO.md) y las imágenes del README. |
 | `Documentos/` | Informe, pitch y hoja de trabajo del equipo. |
 
-Carpetas que **no** se suben a GitHub (están en `.gitignore`): `data/` (datos de Steam), `casos/` (etiquetas del equipo), `modelo/` (el modelo exportado, que incluye el catálogo), los archivos de caché `*.joblib` / `*.parquet` y el material del curso con derechos reservados (`Documentos/Proyecto Final/`).
+Carpetas que **no** se suben a GitHub (están en `.gitignore`): `data/` (datos de Steam y reseñas descargadas), `casos/` (etiquetas del equipo), `modelo/` (el modelo exportado, que incluye el catálogo), los archivos de caché `*.joblib` / `*.parquet` y el material del curso con derechos reservados (`Documentos/Proyecto Final/`).
 
 ---
 
@@ -57,6 +62,15 @@ flowchart LR
 
 El ciclo de la derecha es importante: **cada par que el equipo etiqueta mejora el modelo** (sección 10 del notebook).
 
+Dónde corre cada cosa (el diagrama completo está en el [README](../README.md)):
+
+| Dónde | Qué |
+|---|---|
+| **Google Colab** (GPU) | Entrenamiento: embeddings, imágenes, modelo y exportación del paquete. |
+| **Hugging Face** (dataset privado) | Guarda el paquete del modelo para que el servidor lo descargue. |
+| **Servidor en Oracle Cloud** | La app publicada, siempre encendida, y los casos que etiqueta el equipo. |
+| **Google Drive** | Datos, cachés de Colab y los casos etiquetados que vuelven al notebook. |
+
 ---
 
 ## 4. El stack y por qué se eligió cada pieza
@@ -71,8 +85,9 @@ El ciclo de la derecha es importante: **cada par que el equipo etiqueta mejora e
 | **imagehash** | Hash perceptual de imágenes (`phash`) | Detecta imágenes **casi idénticas** (assets reutilizados) de forma barata y fácil de explicar. Complementa a CLIP, que detecta imágenes *parecidas*. |
 | **rapidfuzz** | Parecido entre títulos | Muy rápido y tolera palabras reordenadas ("Escape the Walls" vs "Walls Escape"). |
 | **requests** | Descargar imágenes y consultar la API de la tienda de Steam | Simple y suficiente. |
+| **Caddy + systemd** (servidor) | HTTPS y mantener la app encendida | Caddy pide y renueva solo el certificado; systemd reinicia la app si falla. |
 | **kagglehub** | Descargar el dataset de Steam de Kaggle | Oficial de Kaggle; funciona directo en Colab. |
-| **Gradio** | Interfaz web de la app | Visto en la clase 4; con `--share` entrega un enlace público temporal. |
+| **Gradio** | Interfaz web de la app | Visto en clases; con `--share` entrega un enlace público temporal. |
 | **pytest + GitHub Actions** | Tests automáticos | Detectan si un cambio rompe algo antes de presentarlo. Suman en "madurez del software" de la pauta. |
 
 ### Lo que se evaluó y se dejó fuera (a propósito)
@@ -82,6 +97,7 @@ El ciclo de la derecha es importante: **cada par que el equipo etiqueta mejora e
 | **SteamDB** como fuente de datos | Su FAQ prohíbe el scraping, incluso académico sin permiso, y prohíbe usar sus datos para entrenar IA. Se puede consultar **a mano** para documentar un caso, citándola. |
 | FAISS u otra base vectorial | Con ~100 mil juegos, la búsqueda de scikit-learn alcanza. Sería complejidad sin beneficio. |
 | MLflow / DVC | Útiles en proyectos largos; para 4 semanas es más costo que beneficio. |
+| Las reseñas como señal del modelo | La mayoría de los juegos no tiene reseñas que hablen de copias, y *clone* suele describir un género. Se usan solo para **elegir qué pares etiquetar** (sección 5.1). |
 | Un LLM que decida si hay copia | La pauta exige un modelo entrenado por el equipo, y delegar el juicio a un LLM contradice "similitud no es plagio". |
 | Comparar código fuente (grafos de flujo de control) | No hay acceso legítimo al código de la mayoría de los juegos y no cabe en el plazo. Queda como trabajo futuro. |
 
@@ -103,6 +119,19 @@ Para cada par de juegos (A, B) se calculan estas señales. Todas valen entre 0 (
 | `mismo_dev` | ¿Son del **mismo estudio**? | 1 si el desarrollador coincide. Una serie propia no es un clon. |
 
 **¿Por qué tantas señales?** Porque cada una falla en casos distintos. Un clon puede reescribir la descripción (TF-IDF falla, embeddings no) o cambiar el texto pero reutilizar capturas (el texto falla, `phash_sim` no). Dos juegos del mismo género comparten vocabulario sin ser copias (TF-IDF da falsa alarma; las imágenes y el título ayudan a descartarlo).
+
+### 5.1 Las reseñas: una pista para elegir qué etiquetar
+
+Revisando pares al azar aparecen pocas copias. Por sugerencia del profesor, `FairPlay_AI_Resenas.ipynb` lee las reseñas recientes de los juegos y busca expresiones como *"clone"*, *"rip-off"*, *"asset flip"* o *"copia"*. Si la reseña además nombra a **otro juego del catálogo**, eso da un par concreto para revisar.
+
+| Regla | Por qué |
+|---|---|
+| Solo cuentan juegos conocidos (con suficientes reseñas) | Muchos juegos poco conocidos se llaman como palabras comunes. |
+| El título debe estar **pegado a la alerta** (*"terraria clone"*, *"clone of terraria"*) o escrito **como nombre propio** cerca de ella | *"find all the cards"* no es una mención del juego *FIND ALL*. |
+| No cuentan *"copy"* ni *"steal"* a secas | Casi siempre significan "ejemplar" y "ganga". |
+| La columna `mismo_estudio` marca los pares de un mismo desarrollador | Secuelas y prólogos no son copias. |
+
+**No es una señal del modelo ni una prueba.** Sirve para priorizar: la etiqueta la pone una persona después de mirar los dos juegos. En la primera corrida, casi todos los pares encontrados resultaron ser del mismo género (*Similar*), y el Modelo A les dio una probabilidad baja: las reseñas ven cosas (mecánicas, "se siente igual") que las señales actuales no miden.
 
 ---
 
@@ -126,7 +155,7 @@ Es un problema de **clasificación binaria sobre pares**, no sobre juegos indivi
 * **Modelo A (sin texto).** Se entrena con las etiquetas débiles **sin ver ninguna señal de texto**. Si las viera, aprendería la regla "texto idéntico = clon", que ya sabemos y que no sirve cuando el clon reescribe la descripción. Sin texto, el modelo tiene que descubrir qué *otras* señales (imágenes, título, tags, fechas) acompañan a un clon.
 * **Modelo B (todas las señales).** Se entrena **solo con etiquetas humanas**. Se activa cuando hay al menos 10 pares de cada clase.
 
-Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se puede mostrar y explicar ("la imagen idéntica empujó la probabilidad hacia arriba"). Se compara con *gradient boosting* para ver si un modelo más flexible gana algo.
+Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se puede mostrar y explicar ("la imagen idéntica empujó la probabilidad hacia arriba"). Como **modelo de comparación** se entrena y evalúa igual un *gradient boosting*, para ver cuánto gana un modelo más flexible. Gana un poco (ver 6.7), pero no se puede explicar señal por señal, así que la app usa la regresión logística.
 
 ### 6.4 Cómo se evalúa sin hacer trampa
 
@@ -142,7 +171,7 @@ flowchart LR
     N[Notebook en Colab<br/>GPU, CLIP, embeddings] -->|sección 11| P[Paquete<br/>modelo_pares.joblib<br/>catalogo.parquet<br/>emb_texto.npy<br/>imagenes.joblib]
     P --> M[modelo.py<br/>carga y busca candidatos]
     S[senales.py<br/>mismas señales que el notebook] --> M
-    M --> A[app.py<br/>pestaña Modelo entrenado]
+    M --> A[app.py<br/>pestañas del modelo]
 ```
 
 **Regla importante:** las señales se calculan en dos lugares (el notebook y `senales.py`). Deben hacerlo exactamente igual, porque el modelo aprendió con los números del notebook. Si se cambia el cálculo de una señal, hay que cambiarla en ambos lados y volver a entrenar. Los tests de `tests/test_senales.py` fijan el comportamiento esperado.
@@ -156,6 +185,27 @@ flowchart LR
 | **PR-AUC** (precisión promedio) | Qué tan bien quedan los pares positivos arriba del ranking, en todos los umbrales | Es la adecuada cuando los positivos son pocos. La exactitud (accuracy) engaña: decir "nunca es clon" acertaría casi siempre. |
 | **ROC-AUC** | Probabilidad de que un positivo al azar quede por encima de un negativo al azar | Referencia estándar. |
 | **Precisión@20** | De los 20 pares que el modelo pone primero, cuántos son realmente positivos | Es lo que vive la persona usuaria: revisa los primeros resultados. |
+
+### 6.7 Resultados actuales (Modelo A)
+
+Validación cruzada por grupos sobre las etiquetas débiles, sin usar señales de texto (sección 6 del notebook principal):
+
+| Modelo | PR-AUC | ROC-AUC | Precisión@20 |
+|---|---|---|---|
+| Al azar (referencia) | 0,247 | 0,499 | 0,30 |
+| **Modelo A · regresión logística** (el de la app) | 0,363 | 0,664 | 0,45 |
+| Modelo de comparación · gradient boosting | 0,415 | 0,722 | 0,50 |
+
+Cómo leerlo: el modelo ordena mejor que el azar usando solo imágenes, título, tags y fechas, pero todavía falla bastante. Estos números miden qué tan bien **reproduce las etiquetas débiles**, no qué tan bien detecta copias. La evaluación con etiquetas humanas (sección 7 del notebook) se llena cuando el equipo termine de etiquetar.
+
+### 6.8 La cola de revisión
+
+`cola.py` decide qué par ve cada persona en la pestaña **Etiquetar pares**:
+
+* Alterna cuatro turnos: el par que el modelo pone primero, el más parecido por palabras, otro del modelo y uno que el modelo considera poco probable. Así las etiquetas no salen solo de lo que el modelo ya cree.
+* Solo usa juegos con al menos 100 reseñas, y cada persona parte en un punto distinto de la lista (según su nombre), para no repetir trabajo.
+* No muestra pares ya etiquetados ni la probabilidad del modelo antes de decidir.
+* Cuenta el progreso: 30 pares por persona, y 10 positivos y 10 negativos del equipo para activar el Modelo B.
 
 ---
 
@@ -201,6 +251,10 @@ Para activar las pestañas del modelo (**Etiquetar pares**, **Buscar un juego** 
 3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
 4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.
 
+### Notebook de reseñas
+
+Abrir `FairPlay_AI_Resenas.ipynb` en Colab (no necesita GPU) y *Ejecutar todo*. Guarda lo descargado en Drive, así que si se corta se puede retomar. Deja `MyDrive/fairplay/salidas/sospechosos_resenas.xlsx`. Con 2.000 juegos tarda cerca de una hora, por la pausa entre consultas a la tienda.
+
 ### Tests
 
 ```bash
@@ -214,15 +268,17 @@ Deben pasar todos. En GitHub se corren solos en cada push (pestaña **Actions**)
 
 ## 8. Publicar la demo
 
-Desde 2026, Hugging Face **cobra** por los Spaces con Gradio (requieren la suscripción PRO); solo los Spaces estáticos son gratis. Por eso la demo se publica con un **enlace temporal de Gradio** (`https://….gradio.live`), que funciona mientras la app esté corriendo (hasta una semana).
+**La versión que usa el equipo está en un servidor gratuito de Oracle Cloud**, siempre encendida, con HTTPS y contraseña. Cómo se instaló, cómo se actualiza y cómo se reentrena está en [`despliegue/oci/README.md`](../despliegue/oci/README.md). El enlace y la contraseña se comparten por el canal privado del equipo.
 
-### 8.1 Opción recomendada: Colab (`FairPlay_AI_Demo.ipynb`)
+Las opciones de abajo sirven como **respaldo** (por ejemplo, si el servidor falla el día de la presentación). Desde 2026, Hugging Face **cobra** por los Spaces con Gradio (requieren la suscripción PRO); solo los Spaces estáticos son gratis. Por eso el respaldo usa un **enlace temporal de Gradio** (`https://….gradio.live`), que funciona mientras la app esté corriendo (hasta una semana).
+
+### 8.1 Respaldo recomendado: Colab (`FairPlay_AI_Demo.ipynb`)
 
 1. Abrir `FairPlay_AI_Demo.ipynb` en Colab (no necesita GPU).
 2. *Entorno de ejecución → Ejecutar todo* y aceptar el acceso a Drive.
 3. Abrir el enlace `gradio.live` que aparece al final y compartirlo.
 
-Lee el modelo desde `MyDrive/fairplay/salidas/paquete_app/` y guarda los casos marcados en `MyDrive/fairplay/data/casos_guardados.csv`, así que **las etiquetas que el equipo ponga en la demo le llegan al notebook principal**.
+Lee el modelo desde `MyDrive/fairplay/salidas/paquete_app/` y guarda los casos marcados en `MyDrive/fairplay/data/casos_guardados.csv`, así que las etiquetas puestas ahí le llegan directo al notebook principal. **Ojo:** es un archivo distinto al del servidor; para no repartir las etiquetas en dos lugares, etiqueten en la app publicada.
 
 ### 8.2 Opción local: `demo.ps1` (Windows)
 
@@ -247,10 +303,11 @@ La app ya está preparada para un Space: basta un **dataset privado** con la car
 | API de la tienda de Steam (`store.steampowered.com/api/appdetails`) | Sí | Pública. Ir lento: el notebook espera 1,5 s entre consultas y guarda cada respuesta. |
 | Imágenes del CDN de Steam (header y capturas) | Sí, para análisis | No redistribuirlas en el repositorio. |
 | Dataset de Steam en Kaggle (FronkonGames) | Sí | Revisar su licencia antes de publicar resultados derivados. |
+| Reseñas de la tienda de Steam (`store.steampowered.com/ajaxappreviews/<appid>`) | Sí, para análisis | Pública. Una pausa entre juegos. El texto de las reseñas es de sus autores: queda en Drive, **no** en el repositorio. |
 | SteamSpy API | Sí | Tags y estimaciones de jugadores. |
 | SteamDB | **Solo consulta manual** | Prohíbe scraping y entrenar IA con sus datos. |
 
-**Privacidad y publicación:** los datos de Steam y las etiquetas del equipo **no** se suben al repositorio público. Tampoco el material del curso con derechos reservados.
+**Privacidad y publicación:** los datos de Steam, las reseñas y las etiquetas del equipo **no** se suben al repositorio público. Tampoco el material del curso con derechos reservados, ni la dirección del servidor, contraseñas o tokens.
 
 ---
 
@@ -289,6 +346,8 @@ Convención de mensajes: `feat:` (algo nuevo), `fix:` (corrección), `docs:` (do
 * En la app, los juegos que no se usaron al entrenar tienen solo la imagen de cabecera (`CABECERAS_APP`). Con una sola imagen, `img_cos` tiende a salir algo más bajo que con header y capturas.
 * Los juegos con descripción muy corta se descartan.
 * La validación por grupos agrupa por familias de positivos; un juego puede aparecer en pares negativos de distintos grupos.
+* Las señales no miden mecánicas ni "cómo se siente" el juego. Los pares que los jugadores llaman *clon* en sus reseñas suelen tener imágenes y textos distintos, y el Modelo A les da una probabilidad baja.
+* Las reseñas solo ayudan con juegos que tienen suficientes reseñas, y dependen de que alguien haya escrito el nombre del otro juego.
 * Solo Steam. Roblox, itch.io y otras tiendas quedan como trabajo futuro.
 
 ---
@@ -307,5 +366,9 @@ Convención de mensajes: `feat:` (algo nuevo), `fix:` (corrección), `docs:` (do
 | **Etiqueta débil** | Etiqueta generada automáticamente con una regla; útil pero imperfecta. |
 | **Validación cruzada** | Entrenar y evaluar varias veces con distintas particiones para medir qué tan bien generaliza. |
 | **PR-AUC** | Área bajo la curva precisión–recall; resume la calidad del ranking cuando los positivos son pocos. |
+| **Regresión logística** | Modelo que suma las señales, cada una con un peso, y convierte la suma en una probabilidad. |
+| **Gradient boosting** | Modelo que combina muchos árboles de decisión pequeños; más flexible, pero más difícil de explicar. |
+| **Cola de revisión** | Lista de pares que la app va mostrando uno a uno para que una persona los etiquete. |
+| **Modelo A / Modelo B** | A: entrenado con etiquetas automáticas, sin texto. B: entrenado con las etiquetas del equipo, con todas las señales. |
 | **Fork** | Copia de un repositorio en tu cuenta de GitHub, para trabajar sin tocar el original. |
 | **Pull request** | Propuesta de incorporar los cambios de una rama al repositorio del equipo. |

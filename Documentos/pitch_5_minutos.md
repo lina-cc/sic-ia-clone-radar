@@ -1,5 +1,16 @@
 # Pitch de 5 minutos: Sistema de detección de similitudes entre videojuegos
 
+> **Nota:** este es el pitch de la **propuesta inicial** y se conserva como antecedente. Varias cosas cambiaron al construir el proyecto:
+>
+> | En el pitch | Lo que se hizo |
+> |---|---|
+> | Roblox, Steam y otras tiendas | Solo Steam (~138 mil juegos). |
+> | CNN con ResNet o MobileNet | CLIP para imágenes parecidas y hash perceptual para imágenes casi idénticas. |
+> | Comparar código con grafos de flujo de control | Quedó como trabajo futuro: no hay acceso legítimo al código. |
+> | Un informe de similitudes | Una app que ordena pares por probabilidad de merecer revisión humana y explica cada señal. |
+>
+> El estado actual, con resultados y limitaciones, está en el [README](../README.md) y en la [Guía técnica](../docs/GUIA_TECNICA.md). La presentación final dura 7 minutos y tiene su propio guion.
+
 ## [0:00 – 0:40] Gancho
 
 Imaginen que son un desarrollador indie. Llevan meses trabajando en su juego. Un día publican unas imágenes de la jugabilidad para generar expectativa. Una semana después, hay al menos siete versiones casi idénticas en Roblox, y algunas salieron antes que su juego original.

@@ -49,10 +49,13 @@ ALERTAS = re.compile(
     r"plagiari[sz](m|ed|es|e)|reskin(ned)?|"
     r"copia(do|da|ron)?|clon(ado|ada|es)?|plagio|plagiado|robad[oa]s?)\b", re.IGNORECASE)
 
-# Títulos de una sola palabra que son palabras comunes: dan demasiadas falsas menciones.
 _PALABRA = re.compile(r"[a-z0-9]+")
+_TOKEN = re.compile(r"[A-Za-z0-9]+")
+_FORMATO = re.compile(r"\[/?[a-z0-9*]+(=[^\]]*)?\]", re.IGNORECASE)     # marcas de formato de Steam: [b], [/h1], [url=...]
 MAX_PALABRAS_TITULO = 6
 VENTANA = 80     # caracteres antes y después de la alerta donde se busca el nombre de otro juego
+# Palabras que pueden ir entre la alerta y el nombre: "clone OF Terraria", "copia DE Terraria"
+RELLENO = {"of", "the", "a", "an", "from", "to", "de", "del", "la", "el", "un", "una"}
 
 
 def tiene_alerta(texto: str) -> bool:
@@ -78,6 +81,7 @@ class Titulos:
     def __init__(self, nombres: dict[int, str], resenas: dict[int, int] | None = None,
                  min_resenas: int = 500, min_letras: int = 8):
         self.indice: dict[tuple[str, ...], int] = {}
+        self.escrito: dict[tuple[str, ...], tuple[str, ...]] = {}
         repetidos = set()
         for appid, nombre in nombres.items():
             clave = tuple(_normalizar(nombre))
@@ -90,20 +94,60 @@ class Titulos:
             if clave in self.indice:        # dos juegos con el mismo nombre: no se sabe cuál es
                 repetidos.add(clave)
             self.indice[clave] = int(appid)
+            self.escrito[clave] = tuple(_TOKEN.findall(nombre))     # con sus mayúsculas originales
         for clave in repetidos:
             del self.indice[clave]
         self.max_palabras = max((len(c) for c in self.indice), default=0)
 
-    def menciones(self, texto: str, propio: int | None = None) -> set[int]:
-        """appid de los juegos que nombra el texto (sin contar el propio juego)."""
-        palabras = _normalizar(texto)
+    def _como_nombre(self, escritos: list[str], clave: tuple[str, ...]) -> bool:
+        """¿Está escrito como nombre propio?
+
+        Vale igual que en el catálogo, todo en mayúsculas o, si tiene dos o más palabras,
+        con cada palabra en mayúscula inicial ("Final Fantasy" para el juego "FINAL FANTASY").
+        """
+        if tuple(escritos) == self.escrito[clave] or all(t.isupper() or t.isdigit() for t in escritos):
+            return True
+        return len(escritos) >= 2 and all(t[0].isupper() or t[0].isdigit() for t in escritos)
+
+    def menciones(self, texto: str, propio: int | None = None, solo_nombres: bool = False) -> set[int]:
+        """appid de los juegos que nombra el texto (sin contar el propio juego).
+
+        Con `solo_nombres=True` solo cuentan los títulos escritos como nombre propio. Así
+        "find all the cards" no cuenta como una mención del juego "FIND ALL".
+        """
+        tokens = _TOKEN.findall(texto or "")
+        palabras = [t.lower() for t in tokens]
         encontrados = set()
         for i in range(len(palabras)):
             for largo in range(1, self.max_palabras + 1):
-                appid = self.indice.get(tuple(palabras[i:i + largo]))
-                if appid is not None and appid != propio:
-                    encontrados.add(appid)
+                clave = tuple(palabras[i:i + largo])
+                appid = self.indice.get(clave)
+                if appid is None or appid == propio:
+                    continue
+                if solo_nombres and not self._como_nombre(tokens[i:i + largo], clave):
+                    continue
+                encontrados.add(appid)
         return encontrados
+
+    def pegados(self, antes: str, despues: str, propio: int | None = None) -> set[int]:
+        """Juegos nombrados justo al lado de una alerta, aunque estén en minúsculas.
+
+        `antes` y `despues` son el texto a cada lado de la expresión de alerta:
+        * justo antes:   "vampire survivors" + clone
+        * justo después: clone + "of super meat boy" (se saltan hasta 3 palabras como "of the")
+        """
+        encontrados = set()
+        previas = _normalizar(antes)
+        for largo in range(1, min(self.max_palabras, len(previas)) + 1):
+            encontrados.add(self.indice.get(tuple(previas[-largo:])))
+        siguientes = _normalizar(despues)
+        saltables = 0
+        while saltables < min(3, len(siguientes)) and siguientes[saltables] in RELLENO:
+            saltables += 1
+        for inicio in range(saltables + 1):       # el título puede empezar con "the": se prueba cada inicio
+            for largo in range(1, self.max_palabras + 1):
+                encontrados.add(self.indice.get(tuple(siguientes[inicio:inicio + largo])))
+        return encontrados - {None, propio}
 
 
 def analizar(appid: int, textos: list[str], titulos: Titulos) -> dict:
@@ -111,14 +155,20 @@ def analizar(appid: int, textos: list[str], titulos: Titulos) -> dict:
 
     `menciones` es {appid_mencionado: número de reseñas que lo nombran cerca de una alerta}.
     `ejemplo` es el trozo de una reseña alrededor de la alerta, para revisarla a mano.
+
+    Un juego cuenta como nombrado si está pegado a la alerta ("terraria clone", "clone of terraria")
+    o si aparece cerca escrito como nombre propio ("It's a clone. Terraria did it better").
     """
     con_alerta = [t for t in textos if tiene_alerta(t)]
     menciones, ejemplos_mencion, ejemplos = Counter(), [], []
     for t in con_alerta:
+        t = _FORMATO.sub(" ", t)      # las reseñas traen marcas como [b]...[/b] que separan el nombre de la alerta
         nombrados = set()
         for m in ALERTAS.finditer(t):
-            trozo = t[max(0, m.start() - VENTANA):m.end() + VENTANA]
-            encontrados = titulos.menciones(trozo, propio=appid)
+            antes, despues = t[max(0, m.start() - VENTANA):m.start()], t[m.end():m.end() + VENTANA]
+            trozo = antes + m.group(0) + despues
+            encontrados = (titulos.pegados(antes, despues, propio=appid)
+                           | titulos.menciones(trozo, propio=appid, solo_nombres=True))
             (ejemplos_mencion if encontrados else ejemplos).append(trozo)
             nombrados |= encontrados
         menciones.update(nombrados)

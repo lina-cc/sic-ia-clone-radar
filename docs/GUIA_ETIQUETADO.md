@@ -1,6 +1,20 @@
 # Guía de etiquetado de pares
 
-El **Modelo B** y la evaluación que vale para el informe (sección 7 del notebook) necesitan pares de juegos revisados por personas. Esta guía explica cómo etiquetar el lote que arma el notebook.
+El **Modelo B** y la evaluación que vale para el informe (sección 7 del notebook) necesitan pares de juegos revisados por personas. Esta guía explica cómo etiquetarlos.
+
+## En un minuto
+
+* **La pregunta:** *¿un especialista debería mirar este par?* No es "¿es plagio?".
+* **Meta:** unos 30 pares por persona, y que el equipo junte al menos **10 «Posible copia»** y **10 «Similar» o «No similar»**. Con eso se activa el Modelo B.
+* **Dónde:** lo más rápido es la app, pestaña **Etiquetar pares** ([sección 6](#6-otra-forma-la-cola-de-revisión-de-la-app)). El lote en Excel (secciones 1 a 5) es la base de la evaluación del informe.
+* **Decide antes de mirar los puntajes del modelo**, y con tu propio criterio: nadie etiqueta a nombre de otra persona.
+
+| En la app | En el Excel | Para el modelo |
+|---|---|---|
+| Posible copia | Coincidencia relevante | Positivo (1) |
+| Similar | Caso legítimo | Negativo (0) |
+| No similar | Descartado | Negativo (0) |
+| Saltar este par | No concluyente | No se usa |
 
 ## 1. Dónde está el lote
 
@@ -68,7 +82,7 @@ La pestaña **Etiquetar pares** de la app muestra los pares uno a uno, con las i
 4. Si no se puede decidir, pulsa **Saltar este par**: no se guarda nada.
 5. Si te equivocaste, **Deshacer el último** borra tu última etiqueta y vuelve a mostrar ese par.
 
-Equivalencias con el Excel: *Posible copia* = *Coincidencia relevante*, *Similar* = *Caso legítimo*, *No similar* = *Descartado*.
+Las equivalencias con el Excel están en la tabla del inicio. Cómo entrar a la app: [LEEME_PROBADORES.md](../Primera%20fase%20pr%C3%A1ctica/LEEME_PROBADORES.md).
 
 La cola no muestra la probabilidad del modelo antes de decidir, por la misma razón que no se mira la hoja «Señales». Mezcla tres tipos de pares: el que el modelo pone primero, el más parecido por palabras y uno que el modelo considera poco probable. Arriba se ve cuántos pares llevas y cuántos le faltan al equipo.
 
@@ -78,13 +92,17 @@ El lote en Excel sigue siendo la base de la evaluación del informe; la cola sir
 
 Revisando pares al azar aparecen pocas copias. El notebook `FairPlay_AI_Resenas.ipynb` busca juegos cuyas reseñas dicen cosas como *"a clone of X"* y deja la lista en `MyDrive/fairplay/salidas/sospechosos_resenas.xlsx`.
 
-1. Abre la hoja **Pares**: cada fila es un juego y el juego que nombran sus reseñas, con un ejemplo.
+1. Abre la hoja **Pares**: cada fila es un juego y el juego que nombran sus reseñas, con un ejemplo. La columna `mismo_estudio` marca los pares de un mismo desarrollador (secuelas, prólogos): casi siempre son *Similar*.
 2. Compara los dos juegos en Steam.
 3. Etiqueta el par en la app: pestaña **Comparar dos juegos**, escribe los dos nombres, pulsa *Comparar* y elige la etiqueta.
 
-Ojo: que una reseña diga *clone* **no** significa copia; muchas veces describe el género. Decide con el criterio de la sección 4, no con la reseña.
+Ojo: que una reseña diga *clone* **no** significa copia; muchas veces describe el género (*"un clon de Vampire Survivors"*). Decide con el criterio de la sección 4, no con la reseña. Algunas filas son errores de la búsqueda (otro juego con el mismo nombre, una frase común): esas no se etiquetan.
+
+Si la lista trae una sugerencia automática, es solo una orientación para repartir el trabajo: no reemplaza mirar los dos juegos.
 
 ## 8. Después de etiquetar
+
+Si etiquetaron en la app publicada, primero hay que llevar los casos del servidor a Drive (`bajar_casos.ps1`, ver [despliegue/oci](../despliegue/oci/README.md#ciclo-para-reentrenar-desde-windows-en-esta-carpeta)).
 
 Vuelvan a correr el notebook completo (*Entorno de ejecución → Desconectar y borrar el entorno*, luego *Ejecutar todo*). La sección 3 imprime cuántos pares humanos leyó. Con al menos **10 pares de cada clase** (positivos = *Coincidencia relevante*; negativos = *Caso legítimo* + *Descartado*):
 
