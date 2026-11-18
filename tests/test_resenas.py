@@ -48,6 +48,28 @@ def test_analizar_cuenta_alertas_y_menciones():
     assert vacio["frac_alerta"] == 0.0 and vacio["menciones"] == {} and vacio["ejemplo"] == ""
 
 
+def test_un_titulo_comun_en_minusculas_no_cuenta_como_mencion():
+    t = Titulos({1: "FIND ALL", 2: "The Way", 3: "Slay the Spire", 9: "Mi Juego"})
+    ruido = ["A deck was stolen and you must find all 52 cards.", "I went all the way but an NPC had stolen my items."]
+    assert analizar(9, ruido, t)["menciones"] == {}
+    # Escrito como nombre propio (igual que en el catálogo o en mayúsculas) sí cuenta, aunque no esté pegado
+    assert analizar(9, ["Total rip-off. FIND ALL did this first, and The Way too."], t)["menciones"] == {1: 1, 2: 1}
+    # También con mayúscula inicial en cada palabra, y aunque haya marcas de formato de por medio
+    assert analizar(9, ["the logo is an obvious [b]Find All[/b] rip-off"], t)["menciones"] == {1: 1}
+
+
+def test_un_titulo_pegado_a_la_alerta_cuenta_aunque_este_en_minusculas():
+    t = Titulos({3: "Slay the Spire", 4: "The Darkside Detective", 5: "Call of Duty", 9: "Mi Juego"})
+    resenas_juego = ["just a chinese knockoff slay the spire with worse cards",       # justo después
+                     "slay the spire clone, nothing new",                             # justo antes
+                     'this shameless "the darkside detective" rip-off looks nice',    # antes, con comillas
+                     "una copia de call of duty muy burda",                           # en español, con "de"
+                     "a rip off of the darkside detective"]                           # se salta "of"; el título parte con "the"
+    assert analizar(9, resenas_juego, t)["menciones"] == {3: 2, 4: 2, 5: 1}
+    # Lejos de la alerta y en minúsculas: no cuenta
+    assert analizar(9, ["a clone, sure, but I still prefer to play slay the spire at night"], t)["menciones"] == {}
+
+
 def test_titulos_solo_juegos_conocidos_si_se_pasan_las_resenas():
     resenas_por_juego = {1: 900, 2: 3, 4: 900}
     t = Titulos(CATALOGO, resenas=resenas_por_juego, min_resenas=500)
