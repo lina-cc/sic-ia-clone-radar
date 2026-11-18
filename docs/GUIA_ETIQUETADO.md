@@ -58,7 +58,22 @@ El lote junta cuatro tipos de pares (los detalles están en la sección 10 del n
 
 Así la evaluación compara los métodos en igualdad de condiciones. Si solo etiquetáramos lo que encuentra el modelo, el modelo saldría mejor de lo que es. Por eso las filas van desordenadas y sin puntajes.
 
-## 6. Después de etiquetar
+## 6. Otra forma: la cola de revisión de la app
+
+La app tiene una pestaña **Cola de revisión** que muestra los pares uno a uno, con las imágenes y las descripciones lado a lado:
+
+1. Escribe tu nombre y pulsa **Empezar**.
+2. Compara los dos juegos (el enlace *Abrir en Steam* muestra capturas y videos).
+3. Pulsa **Posible copia**, **Similar** o **No similar**. El par se guarda y aparece el siguiente.
+4. Si no se puede decidir, pulsa **Saltar**: no se guarda nada.
+
+Equivalencias con el Excel: *Posible copia* = *Coincidencia relevante*, *Similar* = *Caso legítimo*, *No similar* = *Descartado*.
+
+La cola no muestra la probabilidad del modelo antes de decidir, por la misma razón que no se mira la hoja «Señales». Mezcla tres tipos de pares: el que el modelo pone primero, el más parecido por palabras y uno que el modelo considera poco probable. Arriba se ve cuántos pares llevas y cuántos le faltan al equipo.
+
+El lote en Excel sigue siendo la base de la evaluación del informe; la cola sirve para sumar etiquetas rápido.
+
+## 7. Después de etiquetar
 
 Vuelvan a correr el notebook completo (*Entorno de ejecución → Desconectar y borrar el entorno*, luego *Ejecutar todo*). La sección 3 imprime cuántos pares humanos leyó. Con al menos **10 pares de cada clase** (positivos = *Coincidencia relevante*; negativos = *Caso legítimo* + *Descartado*):
 
@@ -67,6 +82,6 @@ Vuelvan a correr el notebook completo (*Entorno de ejecución → Desconectar y 
 
 Cada corrida arma un lote nuevo con pares que todavía no tienen etiqueta. Si quieren más pares, etiqueten el lote nuevo y **agreguen sus filas** a `lote_etiquetado.xlsx` (no lo reemplacen, o se pierden las etiquetas anteriores).
 
-## 7. Datos y privacidad
+## 8. Datos y privacidad
 
 `lote_etiquetado.xlsx` contiene datos de Steam y decisiones del equipo: queda en Drive y **no se sube al repositorio público**.

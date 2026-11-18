@@ -93,7 +93,28 @@ CSS = """
 .fp-lado figcaption{font-size:13px;margin-top:4px;color:var(--body-text-color-subdued)}
 .fp-pie{text-align:center;font-size:12px;color:var(--body-text-color-subdued);margin-top:8px}
 .fp-pie a{color:inherit}
+.fp-prog{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fp-prog>div{border:1px solid var(--border-color-primary);border-radius:12px;padding:10px 14px;
+  background:var(--block-background-fill)}
+.fp-prog span{font-size:12px;color:var(--body-text-color-subdued);display:block}
+.fp-prog b{font-size:20px;font-weight:800}
+.fp-prog b small{font-size:13px;font-weight:500;color:var(--body-text-color-subdued)}
+.fp-prog .fp-barra{margin:6px 0 0}
+.fp-prog .fp-ok .fp-barra i{background:#2f9e5b}
+.fp-prog-nota{font-size:14px;margin-top:10px}
+.fp-par{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fp-juego{border:1px solid var(--border-color-primary);border-radius:14px;padding:14px;
+  background:var(--block-background-fill)}
+.fp-foto{width:100%;aspect-ratio:460/215;object-fit:cover;border-radius:10px;display:block;
+  background:var(--background-fill-secondary)}
+.fp-juego .fp-sinimg{width:100%}
+.fp-juego .fp-titulo{margin-top:10px}
+.fp-desc{font-size:13.5px;line-height:1.5;margin-top:8px;max-height:9em;overflow:auto}
+.fp-abrir{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;color:var(--primary-600)}
+.dark .fp-abrir{color:var(--primary-300)}
+.fp-decision button{min-height:48px;font-weight:700}
 @media (max-width:820px){
+  .fp-prog,.fp-par{grid-template-columns:1fr}
   .fp-card{grid-template-columns:1fr}
   .fp-thumb,.fp-sinimg{width:100%}
   .fp-aportes{grid-template-columns:130px minmax(0,1fr) 48px}
@@ -189,3 +210,53 @@ def explicacion(consulta: str, candidato: str, prob: float, aportes: pd.DataFram
         '<div class="fp-nota">Cada barra es cuánto empuja esa señal: a la derecha hacia "revisar", a la izquierda '
         'hacia "no revisar". "Sin dato" indica que la señal no se pudo calcular (por ejemplo, sin imágenes).</div>'
         + (f'<div class="fp-lado">{lado}</div>' if lado else ""))
+
+
+def progreso(p: dict, anotador: str | None = None) -> str:
+    """Tres contadores de la cola de revisión: los pares de la persona y lo que le falta al equipo.
+
+    `p` es el resultado de ColaRevision.progreso, por ejemplo
+    {"tuyos": 12, "meta": 30, "positivos": 4, "negativos": 25, "minimo": 10, "listo": False}.
+    """
+    def caja(titulo: str, valor: int, tope: int) -> str:
+        ancho = min(valor / tope, 1) * 100 if tope else 0
+        clase = ' class="fp-ok"' if valor >= tope else ""
+        return (f'<div{clase}><span>{escape(titulo)}</span><b>{valor} <small>de {tope}</small></b>'
+                f'<div class="fp-barra"><i style="width:{ancho:.0f}%"></i></div></div>')
+
+    quien = (anotador or "").strip() or "anónimo"   # caja() lo escapa
+    faltan_pos = max(p["minimo"] - p["positivos"], 0)
+    faltan_neg = max(p["minimo"] - p["negativos"], 0)
+    if p["listo"]:
+        nota = "✅ Ya hay etiquetas suficientes para entrenar el <b>Modelo B</b>. Cada par extra mejora la evaluación."
+    else:
+        partes = [f"<b>{n}</b> {txt}" for n, txt in ((faltan_pos, "con «Posible copia»"),
+                                                    (faltan_neg, "con «Similar» o «No similar»")) if n]
+        nota = "Para entrenar el <b>Modelo B</b> al equipo le faltan " + " y ".join(partes) + "."
+    return ('<div class="fp-prog">'
+            + caja(f"Tus pares ({quien})", p["tuyos"], p["meta"])
+            + caja("Equipo · «Posible copia»", p["positivos"], p["minimo"])
+            + caja("Equipo · «Similar» y «No similar»", p["negativos"], p["minimo"])
+            + f'</div><div class="fp-prog-nota">{nota}</div>')
+
+
+def _ficha(j: dict, letra: str) -> str:
+    nombre = escape(j.get("nombre") or "")
+    imagen = (f'<img class="fp-foto" src="{escape(j["imagen"])}" alt="{nombre}">' if j.get("imagen")
+              else '<div class="fp-sinimg">sin imagen</div>')
+    meta = " · ".join(escape(str(x)) for x in (j.get("desarrollador"), j.get("fecha"), j.get("generos")) if x)
+    texto = (j.get("texto") or "").strip()
+    texto = escape(texto[:600] + ("…" if len(texto) > 600 else ""))
+    enlace = (f'<a class="fp-abrir" href="{escape(j["enlace"])}" target="_blank" rel="noopener">'
+              'Abrir en Steam ↗</a>' if j.get("enlace") else "")
+    return (f'<div class="fp-juego">{imagen}'
+            f'<div class="fp-titulo"><span class="fp-rank">{letra}</span>{nombre}</div>'
+            f'<div class="fp-meta">{meta}</div><div class="fp-desc">{texto}</div>{enlace}</div>')
+
+
+def par_cola(a: dict, b: dict) -> str:
+    """Los dos juegos de un par, lado a lado, con lo necesario para decidir sin ver puntajes.
+
+    `a` y `b` son fichas de ColaRevision: nombre, desarrollador, fecha, generos, texto, imagen y enlace.
+    """
+    return f'<div class="fp-par">{_ficha(a, "A")}{_ficha(b, "B")}</div>'

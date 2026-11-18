@@ -74,7 +74,7 @@ Revisar el catálogo a mano es imposible (~138 mil juegos), y una búsqueda por 
 3. **Señales:** para cada par calcula 8 medidas de parecido: texto, imágenes, título, tags, fechas y estudio.
 4. **Modelo:** una regresión logística combina las señales en una **probabilidad de que el par merezca revisión**.
 5. **App:** muestra los candidatos ordenados, el valor de cada señal, las imágenes lado a lado y **por qué** el modelo dio esa probabilidad.
-6. **Ciclo humano:** el equipo etiqueta pares en la app o en un Excel, y esas etiquetas entrenan y evalúan el modelo final.
+6. **Ciclo humano:** el equipo etiqueta pares en la app (con una **cola** que los muestra uno a uno) o en un Excel, y esas etiquetas entrenan y evalúan el modelo final.
 
 <p align="center">
   <img src="docs/img/app_uso.gif" alt="Uso de la app: se busca Stardew Valley, aparecen los candidatos ordenados, se abre la explicación del primero y se guarda el caso como Similar" width="820">
@@ -274,6 +274,7 @@ Sin más pasos funciona la **línea base TF-IDF**. Para la pestaña **Modelo ent
 | Pestaña | Para qué sirve |
 |---|---|
 | **Modelo entrenado** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. |
+| **Cola de revisión** | Etiquetar rápido: muestra un par, se decide con un clic y pasa al siguiente. Lleva la cuenta de cada persona y de lo que le falta al equipo para el Modelo B. |
 | Buscar similares | Línea base: juegos más parecidos por palabras y los términos que comparten. |
 | Comparar dos juegos | Línea base: cuánto aporta cada palabra al parecido de dos juegos concretos. |
 | Texto nuevo | Línea base: busca a partir de una descripción escrita (en inglés). |
@@ -291,7 +292,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-43 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada) y las tarjetas de la interfaz. Se corren solos en GitHub Actions en cada push.
+48 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz y la cola de revisión (no repite pares, cuenta el progreso). Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -305,6 +306,7 @@ sic-ia-clone-radar/
 ├── Primera fase práctica/                # La app web.
 │   ├── app.py                            # Interfaz Gradio y registro de casos.
 │   ├── vista.py                          # Tema, estilos y tarjetas HTML de la interfaz.
+│   ├── cola.py                           # Cola de revisión: qué par toca etiquetar y cuánto lleva el equipo.
 │   ├── modelo.py                         # Carga el paquete del modelo, busca candidatos y explica pares.
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Línea base TF-IDF + similitud coseno.

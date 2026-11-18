@@ -24,6 +24,7 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `Primera fase práctica/app.py` | App web en Gradio: línea base TF-IDF (buscar, comparar, texto nuevo), pestaña **Modelo entrenado** y registro de casos etiquetados. |
 | `Primera fase práctica/requirements.txt` | Dependencias de la app, con versiones fijas. |
 | `Primera fase práctica/vista.py` | Tema, estilos y tarjetas HTML de la interfaz. |
+| `Primera fase práctica/cola.py` | Cola de revisión: elige el próximo par sin etiquetar y cuenta el progreso de cada persona y del equipo. |
 | `despliegue/oci/` | Servidor gratuito en Oracle Cloud: instalación, HTTPS, contraseña y comandos para reentrenar. Ver su [README](../despliegue/oci/README.md). |
 | `tests/` | Tests automáticos de la línea base, las señales, el modelo, la app y la interfaz. |
 | `.github/workflows/tests.yml` | Corre los tests en GitHub en cada push. |
