@@ -23,7 +23,12 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `Primera fase práctica/modelo.py` | Carga el modelo entrenado (exportado por el notebook), busca candidatos y explica pares. |
 | `Primera fase práctica/app.py` | App web en Gradio: línea base TF-IDF (buscar, comparar, texto nuevo), pestaña **Modelo entrenado** y registro de casos etiquetados. |
 | `Primera fase práctica/requirements.txt` | Dependencias de la app, con versiones fijas. |
-| `tests/` | Tests automáticos de `similitud.py` y `app.py`. |
+| `Primera fase práctica/vista.py` | Tema, estilos y tarjetas HTML de la interfaz. |
+| `FairPlay_AI_Resenas.ipynb` | Busca pares sospechosos en las reseñas de los usuarios y deja la lista en Drive. |
+| `Primera fase práctica/resenas.py` | Lógica de ese notebook: detectar expresiones de copia y qué otros juegos nombra una reseña. |
+| `Primera fase práctica/cola.py` | Cola de revisión: elige el próximo par sin etiquetar y cuenta el progreso de cada persona y del equipo. |
+| `despliegue/oci/` | Servidor gratuito en Oracle Cloud: instalación, HTTPS, contraseña y comandos para reentrenar. Ver su [README](../despliegue/oci/README.md). |
+| `tests/` | Tests automáticos de la línea base, las señales, el modelo, la app y la interfaz. |
 | `.github/workflows/tests.yml` | Corre los tests en GitHub en cada push. |
 | `requirements-dev.txt` | Dependencias para desarrollar (app + pytest). |
 | `requirements-notebook.txt` | Dependencias del notebook si se corre fuera de Colab. |
@@ -189,9 +194,9 @@ python app.py
 
 Necesita el parquet en `Primera fase práctica/data/juegos_texto_en.parquet`.
 
-Para activar la pestaña **Modelo entrenado**, copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En esa pestaña:
+Para activar las pestañas del modelo (**Etiquetar pares**, **Buscar un juego** y **Comparar dos juegos**), copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En **Buscar un juego**:
 
-1. Se escribe el título de un juego del catálogo y se pulsa *Buscar candidatos*.
+1. Se escribe el título de un juego del catálogo y se pulsa *Buscar*.
 2. La tabla muestra los candidatos ordenados por **probabilidad de revisar** y el valor de cada señal; la galería muestra sus imágenes de Steam.
 3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
 4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.

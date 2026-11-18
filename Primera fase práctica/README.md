@@ -17,8 +17,9 @@ y evalúa el modelo.
 - `similitud.py`: la lógica (carga de datos, TF-IDF, búsqueda, comparación). No depende de Gradio.
 - `senales.py`: calcula las señales de un par de juegos, igual que el notebook. Sin interfaz ni GPU.
 - `modelo.py`: carga el paquete del modelo exportado por el notebook, busca candidatos y explica pares.
-- `app.py`: la interfaz y el registro de casos. Pestañas: **Buscar candidatos** (modelo entrenado, con explicación y veredicto), **Línea base** (buscar similares, comparar dos juegos y texto nuevo, solo con palabras) y **Acerca de**.
+- `app.py`: la interfaz y el registro de casos. Arriba se escribe el nombre de quien etiqueta (el navegador lo recuerda). Pestañas: **Etiquetar pares** (la cola: un par, un clic, el siguiente; con saltar y deshacer), **Buscar un juego** (candidatos del modelo, con explicación y veredicto), **Comparar dos juegos** (un par concreto, lado a lado, con la opinión del modelo), **Línea base** (buscar similares, comparar y texto nuevo, solo con palabras) y **Ayuda**.
 - `vista.py`: la capa visual (tema, CSS, tarjetas de candidatos y barras de la explicación).
+- `cola.py`: la **cola de revisión**. Decide qué par mostrar a cada persona (sin repetir los ya etiquetados) y cuenta el progreso: pares por persona (meta: 30) y lo que le falta al equipo para entrenar el Modelo B (10 «Posible copia» y 10 «Similar» o «No similar»).
 - `requirements.txt`: dependencias con versiones fijas, probadas con Python 3.12.
 - `environment.yml`: el mismo entorno para Conda.
 

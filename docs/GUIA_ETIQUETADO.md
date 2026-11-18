@@ -58,7 +58,33 @@ El lote junta cuatro tipos de pares (los detalles están en la sección 10 del n
 
 Así la evaluación compara los métodos en igualdad de condiciones. Si solo etiquetáramos lo que encuentra el modelo, el modelo saldría mejor de lo que es. Por eso las filas van desordenadas y sin puntajes.
 
-## 6. Después de etiquetar
+## 6. Otra forma: la cola de revisión de la app
+
+La pestaña **Etiquetar pares** de la app muestra los pares uno a uno, con las imágenes y las descripciones lado a lado:
+
+1. Escribe tu nombre arriba (el navegador lo recuerda). El primer par aparece solo.
+2. Compara los dos juegos (el enlace *Abrir en Steam* muestra capturas y videos).
+3. Pulsa **Posible copia**, **Similar** o **No similar**. El par se guarda y aparece el siguiente.
+4. Si no se puede decidir, pulsa **Saltar este par**: no se guarda nada.
+5. Si te equivocaste, **Deshacer el último** borra tu última etiqueta y vuelve a mostrar ese par.
+
+Equivalencias con el Excel: *Posible copia* = *Coincidencia relevante*, *Similar* = *Caso legítimo*, *No similar* = *Descartado*.
+
+La cola no muestra la probabilidad del modelo antes de decidir, por la misma razón que no se mira la hoja «Señales». Mezcla tres tipos de pares: el que el modelo pone primero, el más parecido por palabras y uno que el modelo considera poco probable. Arriba se ve cuántos pares llevas y cuántos le faltan al equipo.
+
+El lote en Excel sigue siendo la base de la evaluación del informe; la cola sirve para sumar etiquetas rápido.
+
+## 7. Dónde encontrar más «Posible copia»: las reseñas
+
+Revisando pares al azar aparecen pocas copias. El notebook `FairPlay_AI_Resenas.ipynb` busca juegos cuyas reseñas dicen cosas como *"a clone of X"* y deja la lista en `MyDrive/fairplay/salidas/sospechosos_resenas.xlsx`.
+
+1. Abre la hoja **Pares**: cada fila es un juego y el juego que nombran sus reseñas, con un ejemplo.
+2. Compara los dos juegos en Steam.
+3. Etiqueta el par en la app: pestaña **Comparar dos juegos**, escribe los dos nombres, pulsa *Comparar* y elige la etiqueta.
+
+Ojo: que una reseña diga *clone* **no** significa copia; muchas veces describe el género. Decide con el criterio de la sección 4, no con la reseña.
+
+## 8. Después de etiquetar
 
 Vuelvan a correr el notebook completo (*Entorno de ejecución → Desconectar y borrar el entorno*, luego *Ejecutar todo*). La sección 3 imprime cuántos pares humanos leyó. Con al menos **10 pares de cada clase** (positivos = *Coincidencia relevante*; negativos = *Caso legítimo* + *Descartado*):
 
@@ -67,6 +93,6 @@ Vuelvan a correr el notebook completo (*Entorno de ejecución → Desconectar y 
 
 Cada corrida arma un lote nuevo con pares que todavía no tienen etiqueta. Si quieren más pares, etiqueten el lote nuevo y **agreguen sus filas** a `lote_etiquetado.xlsx` (no lo reemplacen, o se pierden las etiquetas anteriores).
 
-## 7. Datos y privacidad
+## 9. Datos y privacidad
 
-`lote_etiquetado.xlsx` contiene datos de Steam y decisiones del equipo: queda en Drive y **no se sube al repositorio público**.
+`lote_etiquetado.xlsx` contiene datos de Steam y decisiones del equipo: queda en Drive y **no se sube al repositorio público**. Lo mismo vale para las reseñas descargadas (`data/resenas_cache.jsonl`) y la lista de sospechosos.
