@@ -60,12 +60,13 @@ Así la evaluación compara los métodos en igualdad de condiciones. Si solo eti
 
 ## 6. Otra forma: la cola de revisión de la app
 
-La app tiene una pestaña **Cola de revisión** que muestra los pares uno a uno, con las imágenes y las descripciones lado a lado:
+La pestaña **Etiquetar pares** de la app muestra los pares uno a uno, con las imágenes y las descripciones lado a lado:
 
-1. Escribe tu nombre y pulsa **Empezar**.
+1. Escribe tu nombre arriba (el navegador lo recuerda). El primer par aparece solo.
 2. Compara los dos juegos (el enlace *Abrir en Steam* muestra capturas y videos).
 3. Pulsa **Posible copia**, **Similar** o **No similar**. El par se guarda y aparece el siguiente.
-4. Si no se puede decidir, pulsa **Saltar**: no se guarda nada.
+4. Si no se puede decidir, pulsa **Saltar este par**: no se guarda nada.
+5. Si te equivocaste, **Deshacer el último** borra tu última etiqueta y vuelve a mostrar ese par.
 
 Equivalencias con el Excel: *Posible copia* = *Coincidencia relevante*, *Similar* = *Caso legítimo*, *No similar* = *Descartado*.
 
@@ -79,7 +80,7 @@ Revisando pares al azar aparecen pocas copias. El notebook `FairPlay_AI_Resenas.
 
 1. Abre la hoja **Pares**: cada fila es un juego y el juego que nombran sus reseñas, con un ejemplo.
 2. Compara los dos juegos en Steam.
-3. Etiqueta el par en la app: pestaña **Línea base → Comparar dos juegos**, escribe los dos nombres y guarda el caso.
+3. Etiqueta el par en la app: pestaña **Comparar dos juegos**, escribe los dos nombres, pulsa *Comparar* y elige la etiqueta.
 
 Ojo: que una reseña diga *clone* **no** significa copia; muchas veces describe el género. Decide con el criterio de la sección 4, no con la reseña.
 

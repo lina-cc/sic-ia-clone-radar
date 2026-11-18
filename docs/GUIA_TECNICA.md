@@ -194,9 +194,9 @@ python app.py
 
 Necesita el parquet en `Primera fase práctica/data/juegos_texto_en.parquet`.
 
-Para activar la pestaña **Modelo entrenado**, copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En esa pestaña:
+Para activar las pestañas del modelo (**Etiquetar pares**, **Buscar un juego** y **Comparar dos juegos**), copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En **Buscar un juego**:
 
-1. Se escribe el título de un juego del catálogo y se pulsa *Buscar candidatos*.
+1. Se escribe el título de un juego del catálogo y se pulsa *Buscar*.
 2. La tabla muestra los candidatos ordenados por **probabilidad de revisar** y el valor de cada señal; la galería muestra sus imágenes de Steam.
 3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
 4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.

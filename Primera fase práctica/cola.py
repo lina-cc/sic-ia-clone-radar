@@ -44,6 +44,26 @@ def _par(a: str, b: str) -> frozenset:
     return frozenset((str(a), str(b)))
 
 
+def ficha(M, pos: int) -> dict:
+    """Lo que se muestra de un juego: nombre, estudio, fecha, géneros, descripción, imagen y enlace.
+
+    `M` es el BuscadorModelo y `pos` la posición del juego en su catálogo.
+    """
+    fila = M.df.iloc[pos]
+    fecha = pd.to_datetime(fila.get("release_date"), errors="coerce")
+    appid = pd.to_numeric(fila.get("appid"), errors="coerce")
+    texto = fila.get("text")
+    return {
+        "nombre": M.tfidf.nombre(pos),
+        "desarrollador": fila.get("developer") if isinstance(fila.get("developer"), str) else "",
+        "fecha": fecha.strftime("%Y-%m-%d") if pd.notna(fecha) else "",
+        "generos": fila.get("genres") if isinstance(fila.get("genres"), str) else "",
+        "texto": texto if isinstance(texto, str) else "",
+        "imagen": M.url_imagen(pos),
+        "enlace": f"https://store.steampowered.com/app/{int(appid)}" if pd.notna(appid) else None,
+    }
+
+
 class ColaRevision:
     def __init__(self, modelo, ruta_casos: str | Path, semilla: int = 2026, min_resenas: int = 100):
         self.M = modelo
@@ -91,22 +111,6 @@ class ColaRevision:
         nombre = (anotador or "").strip().lower() or "anónimo"
         return zlib.crc32(nombre.encode("utf-8")) % len(self.orden)
 
-    def _ficha(self, pos: int) -> dict:
-        """Lo que se muestra de un juego: nombre, estudio, fecha, géneros, descripción, imagen y enlace."""
-        fila = self.M.df.iloc[pos]
-        fecha = pd.to_datetime(fila.get("release_date"), errors="coerce")
-        appid = pd.to_numeric(fila.get("appid"), errors="coerce")
-        texto = fila.get("text")
-        return {
-            "nombre": self.M.tfidf.nombre(pos),
-            "desarrollador": fila.get("developer") if isinstance(fila.get("developer"), str) else "",
-            "fecha": fecha.strftime("%Y-%m-%d") if pd.notna(fecha) else "",
-            "generos": fila.get("genres") if isinstance(fila.get("genres"), str) else "",
-            "texto": texto if isinstance(texto, str) else "",
-            "imagen": self.M.url_imagen(pos),
-            "enlace": f"https://store.steampowered.com/app/{int(appid)}" if pd.notna(appid) else None,
-        }
-
     def siguiente(self, cursor: int, saltados=()) -> dict | None:
         """El próximo par sin etiquetar a partir de `cursor`, o None si no se encontró ninguno.
 
@@ -134,5 +138,5 @@ class ColaRevision:
             if a == b or _par(a, b) in hechos:
                 continue
             return {"cursor": i + 1, "q": q, "pos": int(fila["pos"]), "prob": float(fila["Prob. revisar"]),
-                    "estrategia": estrategia, "a": self._ficha(q), "b": self._ficha(int(fila["pos"]))}
+                    "estrategia": estrategia, "a": ficha(self.M, q), "b": ficha(self.M, int(fila["pos"]))}
         return None

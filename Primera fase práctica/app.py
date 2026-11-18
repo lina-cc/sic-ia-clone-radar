@@ -61,6 +61,33 @@ AVISO_CORTO = (
 )
 
 ACERCA = """
+### Cómo etiquetar, en 3 pasos
+
+1. **Escribe tu nombre** arriba. El navegador lo recuerda para la próxima vez.
+2. En **Etiquetar pares** aparecen dos juegos lado a lado. Compáralos; si dudas, ábrelos en Steam.
+3. Pulsa **Posible copia**, **Similar** o **No similar**. El caso se guarda y aparece el siguiente par.
+
+¿Te equivocaste? **Deshacer el último** borra tu última etiqueta. ¿No se puede decidir? **Saltar este par**.
+
+### Qué etiqueta poner
+
+La pregunta es siempre la misma: **¿un especialista debería mirar este par?**
+
+| Etiqueta | Cuándo | Ejemplo |
+|---|---|---|
+| **Posible copia** | Coincidencias específicas, sin una explicación normal. | Mismas capturas con otro logo; descripción copiada o traducida. |
+| **Similar** | Se parecen, pero hay una razón normal. | Misma saga, remaster, mismo estudio, dos juegos del mismo género. |
+| **No similar** | El parecido es casual. | Solo comparten palabras genéricas como "survive" o "upgrade". |
+
+### Para qué sirve cada pestaña
+
+| Pestaña | Úsala para |
+|---|---|
+| **Etiquetar pares** | Etiquetar rápido: la app te muestra los pares uno a uno. |
+| **Buscar un juego** | Ver qué juegos del catálogo se parecen más a uno, y por qué. |
+| **Comparar dos juegos** | Revisar un par que ya tienes en mente (por ejemplo, uno de la lista de reseñas). |
+| **Línea base** | Comparar solo por palabras: es la referencia contra la que se mide el modelo. |
+
 ### Cómo funciona
 
 1. **Candidatos:** para el juego que buscas, se toman sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings).
@@ -81,12 +108,6 @@ ACERCA = """
 
 Todas van de 0 (nada parecido) a 1 (idéntico); "—" significa que no había dato.
 
-### Qué etiqueta poner
-
-* **Posible copia:** coincidencias específicas que justifican que un especialista lo mire.
-* **Similar:** se parecen, pero por razones normales (mismo género, misma mecánica).
-* **No similar:** el parecido es casual.
-
 Datos: catálogo público de Steam (dataset de Kaggle) e imágenes de la tienda, con fines académicos.
 """
 
@@ -106,13 +127,60 @@ EXPLICACION_MODELO = (
 )
 
 
-def encabezado() -> str:
-    """Logo y nombre de la app (el SVG va en línea para no depender de rutas servidas)."""
+def encabezado(modelo=None) -> str:
+    """Logo, nombre de la app y qué modelo está en uso (el SVG va en línea para no depender de rutas servidas)."""
     logo = (ASSETS / "logo-icono.svg").read_text(encoding="utf-8")
     logo = logo.replace('width="128" height="128"', 'width="56" height="56"', 1)   # solo el marco exterior
+    if modelo is None:
+        chip = ""
+    elif modelo.usa_modelo_B:
+        chip = '<span class="fp-chip fp-chip-b">Modelo B · entrenado con etiquetas del equipo</span>'
+    else:
+        chip = '<span class="fp-chip">Modelo A · etiquetas automáticas</span>'
     return (f'<div class="fp-header">{logo}<div><div class="fp-name">FairPlay <span>AI</span></div>'
             '<div class="fp-tag">Prioriza qué pares de juegos de Steam vale la pena revisar por posible réplica'
-            '</div></div></div>')
+            f'</div>{chip}</div></div>')
+
+
+def borrar_ultimo_caso(ruta: Path, anotador: str, consulta: str, comparado: str) -> bool:
+    """Borra el último caso que esa persona guardó para ese par. Devuelve True si lo encontró.
+
+    Lo usa el botón "Deshacer el último" de la pestaña Etiquetar pares.
+    """
+    anotador = (anotador or "anónimo").strip() or "anónimo"
+    with _lock:
+        if not ruta.exists():
+            return False
+        with ruta.open(newline="", encoding="utf-8-sig") as f:
+            filas = list(csv.DictReader(f))
+        for k in range(len(filas) - 1, -1, -1):
+            fila = filas[k]
+            if (fila.get("anotador"), fila.get("consulta"), fila.get("juego_comparado")) == (anotador, consulta, comparado):
+                del filas[k]
+                break
+        else:
+            return False
+        with ruta.open("w", newline="", encoding="utf-8-sig") as f:
+            w = csv.DictWriter(f, fieldnames=COLUMNAS_CASOS, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(filas)
+    return True
+
+
+def botones_decision() -> dict:
+    """Los tres botones de etiqueta, cada uno con una pista debajo. Devuelve {etiqueta: botón}."""
+    pistas = {
+        "Posible copia": ("fp-b-copia", "Capturas, arte o texto reutilizados. Un especialista debería mirarlo."),
+        "Similar": ("fp-b-similar", "Se parecen por una razón normal: género, saga o mismo estudio."),
+        "No similar": ("fp-b-no", "El parecido es casual. Son juegos distintos."),
+    }
+    botones = {}
+    with gr.Row(elem_classes="fp-decision"):
+        for etiqueta, (clase, pista) in pistas.items():
+            with gr.Column(min_width=180):
+                botones[etiqueta] = gr.Button(etiqueta, elem_classes=clase)
+                gr.HTML(f'<div class="fp-pista">{pista}</div>')
+    return botones
 
 
 PIE = ('<div class="fp-pie">Proyecto capstone · Samsung Innovation Campus 2026 · Equipo FairPlay AI · '
@@ -268,20 +336,29 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Bloc
                                [anotador, estado3, elegido3, etiq3, com3], res_guardar3, api_name="guardar_texto")
 
     with gr.Blocks(title="FairPlay AI · Similitud entre videojuegos") as demo:
-        # Se crea antes de las pestañas (las usan al guardar casos) y se dibuja al final
-        anotador = gr.Textbox(show_label=False, placeholder="anónimo", render=False)
+        # El nombre se guarda en el navegador de cada persona: no hay que escribirlo cada vez
+        nombre_guardado = gr.BrowserState("", storage_key="fairplay_nombre")
         with gr.Row(equal_height=True):
             with gr.Column(scale=3):
-                gr.HTML(encabezado())
+                gr.HTML(encabezado(modelo))
             with gr.Column(scale=2, min_width=280):
                 gr.HTML(f'<div class="fp-aviso">{AVISO_CORTO}</div>')
-        # El modelo entrenado es la herramienta principal; la línea base queda como referencia
+        with gr.Row(equal_height=True, elem_classes="fp-quien"):
+            anotador = gr.Textbox(label="Tu nombre", placeholder="Ej.: Catalina", max_lines=1, scale=2,
+                                  min_width=220)
+            with gr.Column(scale=5, min_width=260):
+                gr.HTML('<div class="fp-quien-nota">Los casos que etiquetes se guardan con este nombre. '
+                        'El navegador lo recuerda; si cambias de computador, escríbelo igual.</div>')
+        # Primero lo que más usa el equipo (etiquetar); la línea base queda al final como referencia
+        cola = None
         with gr.Tabs():
             if modelo is not None:
-                with gr.Tab("Buscar candidatos"):
+                with gr.Tab("Etiquetar pares"):
+                    cola = agregar_pestana_cola(modelo, anotador, registrar, ruta_casos)
+                with gr.Tab("Buscar un juego"):
                     agregar_pestana_modelo(modelo, anotador, registrar)
-                with gr.Tab("Cola de revisión"):
-                    agregar_pestana_cola(modelo, anotador, registrar, ruta_casos)
+                with gr.Tab("Comparar dos juegos"):
+                    agregar_pestana_comparar(modelo, anotador, registrar)
                 with gr.Tab("Línea base (solo palabras)"):
                     pestanas_linea_base()
             else:
@@ -289,11 +366,15 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Bloc
                     pestanas_linea_base()
                 with gr.Tab("Modelo entrenado"):
                     gr.Markdown(SIN_MODELO)
-            with gr.Tab("Acerca de"):
+            with gr.Tab("Ayuda"):
                 gr.Markdown(ACERCA)
-        with gr.Accordion("Tu nombre, para registrar los casos que marques", open=False):
-            anotador.render()
         gr.HTML(PIE)
+
+        anotador.change(lambda n: n, anotador, nombre_guardado)
+        al_abrir = demo.load(lambda n: n or "", nombre_guardado, anotador)
+        if cola is not None:          # con el nombre ya puesto, se muestra el primer par sin pedir nada
+            empezar, salidas_cola = cola
+            al_abrir.then(empezar, anotador, salidas_cola)
     return demo
 
 
@@ -384,43 +465,63 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
     boton_guardar.click(guardar, [anotador, estado, elegido, etiq, com], res_guardar, api_name="guardar_modelo")
 
 
-def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path) -> None:
+def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path):
     """Pestaña para etiquetar rápido: muestra un par, la persona decide con un clic y pasa al siguiente.
 
     No muestra la probabilidad del modelo antes de decidir (sesgaría la etiqueta); queda en un
     acordeón aparte. La lógica de qué par toca está en cola.py.
+
+    Devuelve (empezar, salidas) para que la app cargue el primer par al abrirse.
     """
     from cola import ColaRevision
 
     cola = ColaRevision(M, ruta_casos)
-    inicio_par = vista.vacio("Escribe tu nombre y pulsa <b>Empezar</b>. Verás dos juegos lado a lado: "
-                             "compáralos y elige una etiqueta. El siguiente par aparece solo.")
     inicio_exp = vista.vacio("Aquí aparece lo que opina el modelo sobre el par que estás viendo.")
+    sin_nombre = "✋ **Escribe tu nombre arriba** antes de etiquetar: así tus pares cuentan para tu meta."
 
-    def mostrar(an, estado, mensaje=""):
-        """Busca el próximo par y devuelve todo lo que cambia en pantalla."""
-        par = cola.siguiente(estado["cursor"], estado["saltados"])
+    def limpio(an) -> str:
+        return (an or "").strip()
+
+    def pantalla(an, estado, mensaje=""):
+        """Todo lo que se ve en la pestaña para el estado actual."""
+        par = estado.get("par")
         prog = vista.progreso(cola.progreso(an), an)
+        ultimos = vista.ultimos(cola.casos(), an)
         if par is None:
-            estado = {**estado, "par": None}
             return (prog, vista.vacio("No encontré más pares sin etiquetar por ahora. ¡Gracias!"),
-                    inicio_exp, estado, "", mensaje)
+                    inicio_exp, estado, "", mensaje, ultimos)
         prob, aportes = M.explicar(par["q"], par["pos"])
         exp = vista.explicacion(par["a"]["nombre"], par["b"]["nombre"], prob, aportes, None, None)
-        estado = {**estado, "cursor": par["cursor"], "par": par}
-        return prog, vista.par_cola(par["a"], par["b"]), exp, estado, "", mensaje
+        return prog, vista.par_cola(par["a"], par["b"]), exp, estado, "", mensaje, ultimos
+
+    def avanzar(an, estado, mensaje=""):
+        par = cola.siguiente(estado["cursor"], estado["saltados"])
+        estado = {**estado, "par": par, "cursor": par["cursor"] if par else estado["cursor"]}
+        return pantalla(an, estado, mensaje)
 
     def empezar(an):
-        return mostrar(an, {"cursor": cola.inicio(an), "saltados": [], "par": None})
+        return avanzar(an, {"nombre": limpio(an), "cursor": cola.inicio(an), "saltados": [],
+                            "par": None, "anterior": None})
+
+    def al_cambiar_nombre(an, estado):
+        """Si la persona cambió su nombre, la cola parte desde su punto de inicio."""
+        if estado and estado.get("nombre") == limpio(an):
+            return tuple(gr.update() for _ in salidas)
+        return empezar(an)
 
     def decidir(etiqueta):
         def accion(an, estado, comentario):
-            if not estado or not estado.get("par"):
+            if not estado:
                 return empezar(an)
-            par = estado["par"]
+            if not limpio(an):
+                return pantalla(an, estado, sin_nombre)
+            par = estado.get("par")
+            if not par:
+                return avanzar(an, estado)
             msg = registrar(an, f"cola-{par['estrategia']}", par["a"]["nombre"], par["b"]["nombre"],
                             round(par["prob"], 2), etiqueta, comentario)
-            return mostrar(an, estado, msg)
+            return avanzar(an, {**estado, "anterior": par},
+                           f"✅ {msg[:-1]} (frente a **{par['a']['nombre']}**).")
         return accion
 
     def saltar(an, estado):
@@ -428,39 +529,114 @@ def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path) -> None:
             return empezar(an)
         par = estado["par"]
         estado = {**estado, "saltados": estado["saltados"] + [[par["a"]["nombre"], par["b"]["nombre"]]]}
-        return mostrar(an, estado, "Par saltado: no se guardó nada.")
+        return avanzar(an, estado, "Par saltado: no se guardó nada.")
 
-    gr.Markdown("Etiqueta pares **sin buscar**: la app te los muestra uno a uno. La pregunta es siempre "
-                "**¿un especialista debería mirar este par?**")
+    def deshacer(an, estado):
+        if not estado:
+            return empezar(an)
+        anterior = estado.get("anterior")
+        if not anterior:
+            return pantalla(an, estado, "No hay nada que deshacer (solo se puede deshacer la última etiqueta).")
+        borrado = borrar_ultimo_caso(ruta_casos, an, anterior["a"]["nombre"], anterior["b"]["nombre"])
+        # Vuelve a mostrar el par anterior; el que estaba en pantalla aparecerá después
+        estado = {**estado, "par": anterior, "anterior": None, "cursor": anterior["cursor"]}
+        return pantalla(an, estado, "↩ Etiqueta borrada. Vuelve a decidir este par."
+                        if borrado else "No encontré esa etiqueta para borrarla.")
+
+    gr.HTML(vista.pasos([("Compara", "Mira los dos juegos. Si dudas, ábrelos en Steam."),
+                         ("Decide", "¿Un especialista debería mirar este par?"),
+                         ("Sigue", "El caso se guarda y aparece el siguiente par.")]))
     progreso = gr.HTML(vista.progreso(cola.progreso(None)))
-    with gr.Row(equal_height=True):
-        nombre = gr.Textbox(label="Tu nombre", placeholder="Ej.: Catalina", scale=4)
-        boton = gr.Button("Empezar", variant="primary", scale=1, min_width=120, elem_classes="fp-btn")
-    par_html = gr.HTML(inicio_par)
+    par_html = gr.HTML(vista.vacio("Cargando el primer par…"))
     estado = gr.State()
-    comentario = gr.Textbox(label="Comentario (opcional, escríbelo antes de elegir)",
-                            placeholder="Ej.: mismas capturas con otro logo")
-    with gr.Row(elem_classes="fp-decision"):
-        b_copia = gr.Button("Posible copia", variant="primary")
-        b_similar = gr.Button("Similar")
-        b_no = gr.Button("No similar")
-        b_saltar = gr.Button("Saltar (no se puede decidir)", variant="secondary")
+    botones = botones_decision()
+    with gr.Row(equal_height=True):
+        comentario = gr.Textbox(label="Comentario (opcional; escríbelo antes de elegir)",
+                                placeholder="Ej.: mismas capturas con otro logo", scale=4)
+        b_saltar = gr.Button("Saltar este par", scale=1, min_width=150, elem_classes="fp-btn")
+        b_deshacer = gr.Button("↩ Deshacer el último", scale=1, min_width=170, elem_classes="fp-btn")
     mensaje = gr.Markdown()
-    gr.Markdown("**Posible copia:** coincidencias específicas, como capturas o texto reutilizados. "
-                "**Similar:** se parecen por una razón normal (género, saga, mismo estudio). "
-                "**No similar:** el parecido es casual.")
     with gr.Accordion("Qué opina el modelo (ábrelo después de decidir)", open=False):
         exp = gr.HTML(inicio_exp)
+    with gr.Accordion("Tus últimos casos", open=False):
+        ultimos = gr.HTML(vista.ultimos(cola.casos(), None))
 
-    salidas = [progreso, par_html, exp, estado, comentario, mensaje]
-    # El nombre es el mismo campo que usa el resto de la app (está al pie): se copian entre sí
-    nombre.input(lambda n: n, nombre, anotador)
-    anotador.input(lambda n: n, anotador, nombre)
-    boton.click(empezar, nombre, salidas, api_name="cola_empezar")
-    nombre.submit(empezar, nombre, salidas)
-    for b, etiqueta in ((b_copia, "Posible copia"), (b_similar, "Similar"), (b_no, "No similar")):
-        b.click(decidir(etiqueta), [nombre, estado, comentario], salidas)
-    b_saltar.click(saltar, [nombre, estado], salidas)
+    salidas = [progreso, par_html, exp, estado, comentario, mensaje, ultimos]
+    for etiqueta, boton in botones.items():
+        boton.click(decidir(etiqueta), [anotador, estado, comentario], salidas)
+    b_saltar.click(saltar, [anotador, estado], salidas)
+    b_deshacer.click(deshacer, [anotador, estado], salidas)
+    anotador.submit(al_cambiar_nombre, [anotador, estado], salidas)
+    anotador.blur(al_cambiar_nombre, [anotador, estado], salidas)
+    return empezar, salidas
+
+
+def agregar_pestana_comparar(M, anotador, registrar) -> None:
+    """Pestaña para revisar un par concreto: dos nombres, los juegos lado a lado, la opinión del modelo y la etiqueta.
+
+    Sirve, por ejemplo, para etiquetar los pares que propone el notebook de reseñas.
+    """
+    from cola import ficha
+
+    inicio = vista.vacio("Escribe los nombres de dos juegos de Steam para verlos <b>lado a lado</b> "
+                         "y saber qué opina el modelo.")
+    inicio_exp = vista.vacio("Aquí aparece por qué el modelo recomienda, o no, revisar el par.")
+
+    def buscar(nombre):
+        """Posición del juego en el catálogo, o un mensaje con sugerencias si no está."""
+        try:
+            return M.tfidf.buscar(nombre), None
+        except KeyError:
+            sug = M.tfidf.sugerencias(nombre)
+            msg = f"No encontré <b>{escape(nombre)}</b> en el catálogo."
+            if sug:
+                msg += "<br>¿Quizás buscabas " + ", ".join(f"<b>{escape(x)}</b>" for x in sug) + "?"
+            return None, msg
+
+    def comparar(a, b):
+        a, b = (a or "").strip(), (b or "").strip()
+        if not a or not b:
+            return vista.vacio("Escribe los dos títulos."), inicio_exp, None, ""
+        (i, error_a), (j, error_b) = buscar(a), buscar(b)
+        if error_a or error_b:
+            return vista.vacio(error_a or error_b), inicio_exp, None, ""
+        if i == j:
+            return vista.vacio("Son el mismo juego. Escribe dos títulos distintos."), inicio_exp, None, ""
+        prob, aportes = M.explicar(i, j)
+        fa, fb = ficha(M, i), ficha(M, j)
+        exp = vista.explicacion(fa["nombre"], fb["nombre"], prob, aportes, None, None)
+        return vista.par_cola(fa, fb), exp, {"a": fa["nombre"], "b": fb["nombre"], "prob": round(prob, 2)}, ""
+
+    def decidir(etiqueta):
+        def accion(an, estado, comentario):
+            if not estado:
+                return "Primero compara dos juegos."
+            if not (an or "").strip():
+                return "✋ **Escribe tu nombre arriba** antes de guardar."
+            msg = registrar(an, "comparar-modelo", estado["a"], estado["b"], estado["prob"], etiqueta, comentario)
+            return f"✅ {msg[:-1]} (frente a **{estado['a']}**)."
+        return accion
+
+    with gr.Row(equal_height=True):
+        a = gr.Textbox(label="Juego A", placeholder="Ej.: Stardew Valley", scale=3)
+        b = gr.Textbox(label="Juego B", placeholder="Ej.: Coral Island", scale=3)
+        boton = gr.Button("Comparar", variant="primary", scale=1, min_width=120, elem_classes="fp-btn")
+    par_html = gr.HTML(inicio)
+    estado = gr.State()
+    with gr.Accordion("Qué opina el modelo", open=True):
+        exp = gr.HTML(inicio_exp)
+    gr.Markdown("### Tu veredicto")
+    botones = botones_decision()
+    comentario = gr.Textbox(label="Comentario (opcional; escríbelo antes de elegir)",
+                            placeholder="Ej.: mismas capturas con otro logo")
+    mensaje = gr.Markdown()
+
+    salidas = [par_html, exp, estado, mensaje]
+    boton.click(comparar, [a, b], salidas, api_name="modelo_comparar")
+    a.submit(comparar, [a, b], salidas)
+    b.submit(comparar, [a, b], salidas)
+    for etiqueta, bot in botones.items():
+        bot.click(decidir(etiqueta), [anotador, estado, comentario], mensaje)
 
 
 def resolver_datos(ruta: str | Path) -> Path:

@@ -112,9 +112,29 @@ CSS = """
 .fp-desc{font-size:13.5px;line-height:1.5;margin-top:8px;max-height:9em;overflow:auto}
 .fp-abrir{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;color:var(--primary-600)}
 .dark .fp-abrir{color:var(--primary-300)}
-.fp-decision button{min-height:48px;font-weight:700}
+.fp-chip{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;
+  background:var(--background-fill-secondary);border:1px solid var(--border-color-primary)}
+.fp-chip-b{background:#e7f6ec;border-color:#9fd3b1;color:#1d6b3a}
+.dark .fp-chip-b{background:rgba(47,158,91,.18);border-color:rgba(47,158,91,.5);color:#8fdcaa}
+.fp-quien-nota{font-size:13px;color:var(--body-text-color-subdued);padding-top:26px;line-height:1.45}
+.fp-pasos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:4px}
+.fp-pasos>div{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.4}
+.fp-pasos .fp-rank{flex:none;margin:1px 0 0}
+.fp-pasos b{display:block;font-size:14.5px}
+.fp-pasos span.t{color:var(--body-text-color-subdued)}
+.fp-pista{font-size:12.5px;line-height:1.4;color:var(--body-text-color-subdued);text-align:center;padding:0 6px}
+.fp-decision button{min-height:52px;font-weight:700;font-size:16px}
+.fp-b-copia{background:var(--secondary-500)!important;color:#fff!important;border-color:var(--secondary-600)!important}
+.fp-b-copia:hover{background:var(--secondary-600)!important}
+.fp-b-similar{background:var(--primary-600)!important;color:#fff!important;border-color:var(--primary-700)!important}
+.fp-b-similar:hover{background:var(--primary-700)!important}
+.fp-b-no{background:var(--neutral-600)!important;color:#fff!important;border-color:var(--neutral-700)!important}
+.fp-b-no:hover{background:var(--neutral-700)!important}
+.fp-ultimos{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;font-size:13.5px}
+.fp-ultimos em{font-style:normal;font-weight:600}
 @media (max-width:820px){
-  .fp-prog,.fp-par{grid-template-columns:1fr}
+  .fp-prog,.fp-par,.fp-pasos{grid-template-columns:1fr}
+  .fp-quien-nota{padding-top:0}
   .fp-card{grid-template-columns:1fr}
   .fp-thumb,.fp-sinimg{width:100%}
   .fp-aportes{grid-template-columns:130px minmax(0,1fr) 48px}
@@ -260,3 +280,26 @@ def par_cola(a: dict, b: dict) -> str:
     `a` y `b` son fichas de ColaRevision: nombre, desarrollador, fecha, generos, texto, imagen y enlace.
     """
     return f'<div class="fp-par">{_ficha(a, "A")}{_ficha(b, "B")}</div>'
+
+
+def pasos(lista: list[tuple[str, str]]) -> str:
+    """Tira de pasos numerados. `lista` es [(título, texto), ...]; por ejemplo [("Compara", "Mira los dos juegos.")]."""
+    return '<div class="fp-pasos">' + "".join(
+        f'<div><span class="fp-rank">{n}</span><div><b>{escape(titulo)}</b><span class="t">{escape(texto)}</span></div></div>'
+        for n, (titulo, texto) in enumerate(lista, start=1)) + "</div>"
+
+
+def ultimos(casos: pd.DataFrame, anotador: str | None, n: int = 8) -> str:
+    """Los últimos `n` casos que guardó la persona, del más nuevo al más antiguo.
+
+    `casos` es la tabla de ColaRevision.casos (columnas anotador, consulta, juego_comparado y etiqueta).
+    """
+    nombre = (anotador or "").strip().lower()
+    if not nombre:
+        return vacio("Escribe tu nombre arriba para ver los casos que has guardado.")
+    mios = casos[casos["anotador"].str.strip().str.lower() == nombre].tail(n).iloc[::-1]
+    if mios.empty:
+        return vacio("Todavía no has guardado casos con este nombre.")
+    filas = "".join(f'<span>{escape(str(r.consulta))} ↔ {escape(str(r.juego_comparado))}</span>'
+                    f'<em>{escape(str(r.etiqueta))}</em>' for r in mios.itertuples())
+    return f'<div class="fp-ultimos">{filas}</div>'

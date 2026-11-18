@@ -216,8 +216,12 @@ Corrida completa en Google Colab (GPU T4), 4 de noviembre de 2026, sobre **137.9
 | Modelo | PR-AUC | ROC-AUC | Precisión@20 |
 |---|---|---|---|
 | Modelo A · regresión logística | 0,363 | 0,664 | 0,45 |
-| Modelo A · gradient boosting | 0,415 | 0,722 | 0,50 |
+| Modelo de comparación · gradient boosting | 0,415 | 0,722 | 0,50 |
 | Azar (referencia) | 0,247 | 0,499 | 0,30 |
+
+**Sobre el gradient boosting:** es un **modelo de comparación**. Se entrenó y se evaluó igual que la regresión logística: mismos 3.000 pares, mismas señales y misma validación cruzada por familias (`HistGradientBoostingClassifier` de scikit-learn, con árboles de profundidad 3). Rinde algo mejor (1 acierto más de cada 20), pero la app usa la regresión logística porque permite explicar cada resultado. Con las etiquetas humanas se vuelven a comparar los dos.
+
+**De dónde salen estos números:** de la **sección 6** del [notebook principal](FairPlay_AI_Clasificador_Pares.ipynb) (*Modelo A: reconoce clones sin mirar el texto*), que imprime esta tabla al terminar la validación cruzada. Los gráficos de este README se dibujaron con esos valores. Cualquiera puede repetir la corrida en Colab con el botón de arriba; la sección 12 del notebook explica cómo contar los resultados.
 
 **¿Qué señales pesan más?** En la regresión logística, la que más empuja es la coincidencia de géneros y tags, seguida por el parecido de las imágenes:
 
@@ -273,13 +277,13 @@ Sin más pasos funciona la **línea base TF-IDF**. Para la pestaña **Modelo ent
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Modelo entrenado** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. |
-| **Cola de revisión** | Etiquetar rápido: muestra un par, se decide con un clic y pasa al siguiente. Lleva la cuenta de cada persona y de lo que le falta al equipo para el Modelo B. |
-| Buscar similares | Línea base: juegos más parecidos por palabras y los términos que comparten. |
-| Comparar dos juegos | Línea base: cuánto aporta cada palabra al parecido de dos juegos concretos. |
-| Texto nuevo | Línea base: busca a partir de una descripción escrita (en inglés). |
+| **Etiquetar pares** | La cola de revisión: muestra dos juegos lado a lado, se decide con un clic y aparece el siguiente. Lleva la cuenta de cada persona y de lo que le falta al equipo para el Modelo B. Permite saltar un par y deshacer la última etiqueta. |
+| **Buscar un juego** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. |
+| **Comparar dos juegos** | Un par concreto: los dos juegos lado a lado, lo que opina el modelo y la etiqueta. |
+| Línea base (solo palabras) | La referencia TF-IDF: buscar similares, comparar dos juegos por sus palabras y buscar a partir de un texto nuevo (en inglés). |
+| Ayuda | Cómo etiquetar en 3 pasos, qué etiqueta poner y para qué sirve cada pestaña. |
 
-En todas se puede guardar un caso (*Similar*, *No similar*, *Posible copia*) que se suma a las etiquetas humanas.
+Arriba se escribe **tu nombre** una sola vez (el navegador lo recuerda) y un aviso indica si la app usa el Modelo A o el B. En las tres primeras pestañas se puede guardar un caso (*Posible copia*, *Similar*, *No similar*) que se suma a las etiquetas humanas.
 
 ### Opción 5 · Ayudar a etiquetar
 
@@ -298,7 +302,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-67 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
+72 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -313,7 +317,7 @@ sic-ia-clone-radar/
 ├── Primera fase práctica/                # La app web.
 │   ├── app.py                            # Interfaz Gradio y registro de casos.
 │   ├── vista.py                          # Tema, estilos y tarjetas HTML de la interfaz.
-│   ├── cola.py                           # Cola de revisión: qué par toca etiquetar y cuánto lleva el equipo.
+│   ├── cola.py                           # Cola de la pestaña «Etiquetar pares»: qué par toca y cuánto lleva el equipo.
 │   ├── resenas.py                        # Reseñas de usuarios: expresiones de copia y juegos que nombran.
 │   ├── modelo.py                         # Carga el paquete del modelo, busca candidatos y explica pares.
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
