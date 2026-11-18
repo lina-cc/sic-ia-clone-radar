@@ -285,6 +285,12 @@ En todas se puede guardar un caso (*Similar*, *No similar*, *Posible copia*) que
 
 Sigue la [Guía de etiquetado](docs/GUIA_ETIQUETADO.md): copia `salidas/lote_para_etiquetar.xlsx` a `MyDrive/fairplay/data/lote_etiquetado.xlsx`, complétalo con la lista desplegable y vuelve a correr el notebook.
 
+### Opción 6 · Buscar sospechosos con las reseñas
+
+Los jugadores suelen ser los primeros en escribir *"esto es una copia de X"*. [`FairPlay_AI_Resenas.ipynb`](FairPlay_AI_Resenas.ipynb) lee reseñas públicas de Steam, marca las que usan expresiones como *clone*, *rip-off* o *asset flip* y, si cerca nombran a otro juego del catálogo, propone ese par para etiquetar. Se corre en Colab sin GPU y guarda la lista en Drive.
+
+Es una **pista para decidir qué mirar primero**, no una señal del modelo ni una prueba: *clone* también se usa para describir un género. Idea sugerida por el profesor del curso.
+
 ### Tests
 
 ```bash
@@ -292,7 +298,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-48 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz y la cola de revisión (no repite pares, cuenta el progreso). Se corren solos en GitHub Actions en cada push.
+67 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -302,11 +308,13 @@ pytest
 sic-ia-clone-radar/
 ├── FairPlay_AI_Clasificador_Pares.ipynb  # ⭐ Notebook principal: datos reales, señales, modelo, evaluación y exportación.
 ├── FairPlay_AI_Demo.ipynb                # Abre la app en Colab con un enlace público temporal.
+├── FairPlay_AI_Resenas.ipynb             # Busca pares sospechosos leyendo las reseñas de los usuarios.
 ├── FairPlay_AI_DBSCAN.ipynb              # Primer experimento con datos simulados (antecedente).
 ├── Primera fase práctica/                # La app web.
 │   ├── app.py                            # Interfaz Gradio y registro de casos.
 │   ├── vista.py                          # Tema, estilos y tarjetas HTML de la interfaz.
 │   ├── cola.py                           # Cola de revisión: qué par toca etiquetar y cuánto lleva el equipo.
+│   ├── resenas.py                        # Reseñas de usuarios: expresiones de copia y juegos que nombran.
 │   ├── modelo.py                         # Carga el paquete del modelo, busca candidatos y explica pares.
 │   ├── senales.py                        # Señales por par, calculadas igual que en el notebook.
 │   ├── similitud.py                      # Línea base TF-IDF + similitud coseno.
@@ -382,7 +390,7 @@ Lista completa en la [Guía técnica §11](docs/GUIA_TECNICA.md#11-limitaciones-
 | **Demo y README** | 30 nov | 🔄 En revisión |
 | **Presentación final (7 min)** | 3 dic | 🔄 En preparación |
 
-**Trabajo futuro:** comparar videos y más capturas por juego; sumar otras tiendas (itch.io, Roblox); y, solo con acceso legítimo al código fuente, comparar código mediante grafos de flujo de control.
+**Trabajo futuro:** usar las reseñas de los usuarios como una señal más del modelo (hoy solo ayudan a elegir qué pares etiquetar); comparar videos y más capturas por juego; sumar otras tiendas (itch.io, Roblox); y, solo con acceso legítimo al código fuente, comparar código mediante grafos de flujo de control.
 
 ---
 
