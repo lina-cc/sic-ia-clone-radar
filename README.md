@@ -16,7 +16,7 @@ Equipo: **Ignacio Hidalgo, Sergio Rebolledo, Catalina Caris y Avelyn García**.
 
 <p align="center">
   <img src="docs/img/app_modelo.png" alt="App de FairPlay AI: candidatos para Stardew Valley ordenados por probabilidad de revisión, con el valor de cada señal" width="900">
-  <br><sub>La app buscando candidatos para <i>Stardew Valley</i> con el modelo entrenado. Cada columna es una señal entre 0 (nada parecido) y 1 (idéntico).</sub>
+  <br><sub>La app buscando candidatos para <i>Stardew Valley</i> con el modelo entrenado. Cada barra es una señal entre 0 (nada parecido) y 1 (idéntico). Las imágenes de los juegos se ocultan en las capturas porque son arte de Steam.</sub>
 </p>
 
 ### ⏱️ En 30 segundos
@@ -78,7 +78,14 @@ Revisar el catálogo a mano es imposible (~138 mil juegos), y una búsqueda por 
 
 <p align="center">
   <img src="docs/img/app_uso.gif" alt="Uso de la app: se busca Stardew Valley, aparecen los candidatos ordenados, se abre la explicación del primero y se guarda el caso como Similar" width="820">
-  <br><sub>La app en 17 segundos: buscar, leer la explicación y guardar la decisión. Las imágenes de los juegos se ocultan porque son arte de Steam.</sub>
+  <br><sub>La app en 17 segundos: buscar, leer la explicación y guardar la decisión.</sub>
+</p>
+
+Para etiquetar no hace falta buscar: la pestaña **Etiquetar pares** muestra dos juegos lado a lado, se decide con un clic y aparece el siguiente. Arriba se ve cuánto lleva cada persona y cuánto le falta al equipo para entrenar el Modelo B.
+
+<p align="center">
+  <img src="docs/img/app_etiquetar.png" alt="Pestaña Etiquetar pares: tres pasos, contadores de progreso, dos juegos lado a lado con su descripción y tres botones: Posible copia, Similar y No similar" width="820">
+  <br><sub>Etiquetar pares: un remake y su original, el caso típico de <i>Similar</i>.</sub>
 </p>
 
 ---
