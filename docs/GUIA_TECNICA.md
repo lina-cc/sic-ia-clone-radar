@@ -248,7 +248,7 @@ Necesita el parquet en `Primera fase práctica/data/juegos_texto_en.parquet`.
 Para activar las pestañas del modelo (**Etiquetar pares**, **Buscar un juego** y **Comparar dos juegos**), copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En **Buscar un juego**:
 
 1. Se escribe el título de un juego del catálogo y se pulsa *Buscar*.
-2. La tabla muestra los candidatos ordenados por **probabilidad de revisar** y el valor de cada señal; la galería muestra sus imágenes de Steam.
+2. La tabla muestra los candidatos ordenados por **probabilidad de revisar**. Los candidatos son los 10 juegos más parecidos por palabras, los 10 más parecidos por significado y los que tienen una imagen casi idéntica (coseno CLIP ≥ 0,96, como máximo 10). Lo último solo está en la app; el notebook arma los pares de entrenamiento solo con el texto. Ver [`experimentos/vecinos_imagen/`](../experimentos/vecinos_imagen/). La tabla muestra también el valor de cada señal; la galería muestra sus imágenes de Steam.
 3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
 4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.
 

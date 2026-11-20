@@ -49,6 +49,35 @@ def test_el_clon_es_el_primer_candidato(paquete_modelo):
     assert res["Prob. revisar"].is_monotonic_decreasing
 
 
+def test_un_juego_con_la_misma_imagen_es_candidato_aunque_el_texto_sea_otro(paquete_modelo):
+    import joblib
+
+    imagenes = joblib.load(paquete_modelo / "imagenes.joblib")
+    imagenes[6] = {"emb": imagenes[1]["emb"].copy(), "hash": imagenes[1]["hash"].copy()}   # Racing Legends
+    joblib.dump(imagenes, paquete_modelo / "imagenes.joblib")
+    m = BuscadorModelo(paquete_modelo)
+    m.k_vecinos = 2                                     # tope de candidatos por cada vía
+    escape, racing = m.tfidf.buscar("Escape the Walls"), 5
+    assert m.df.loc[racing, "appid"] == 6
+    assert set(m.vecinos_imagen(escape)) == {1, racing}  # Escape Walls Obby y Racing Legends
+    assert racing in m.vecinos(escape)
+    # Un juego cuya imagen no se parece a ninguna otra no suma candidatos por imagen
+    farm = m.tfidf.buscar("Farm Tycoon")
+    assert m.vecinos_imagen(farm) == []
+    # Las señales siguen igual con los vectores ya indexados
+    assert m.senales.calcular([escape], [racing]).iloc[0]["img_cos"] > 0.99
+
+
+def test_sin_imagenes_los_candidatos_salen_solo_del_texto(paquete_modelo):
+    import joblib
+
+    joblib.dump({}, paquete_modelo / "imagenes.joblib")
+    m = BuscadorModelo(paquete_modelo)
+    escape = m.tfidf.buscar("Escape the Walls")
+    assert m.vecinos_imagen(escape) == []
+    assert len(m.candidatos(escape, k=3)) > 0
+
+
 def test_explicar_usa_nombres_legibles_y_marca_lo_que_falta(paquete_modelo):
     m = BuscadorModelo(paquete_modelo)
     q = m.tfidf.buscar("Escape the Walls")
