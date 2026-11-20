@@ -25,6 +25,10 @@ from senales import SENALES, CalculadoraSenales
 from similitud import BuscadorTfidf
 
 ARCHIVOS = ["modelo_pares.joblib", "catalogo.parquet", "emb_texto.npy", "imagenes.joblib"]
+# Los candidatos salen del texto; además se suman los juegos con una imagen casi idéntica (coseno CLIP).
+# Con este umbral las búsquedas normales no cambian y aparecen los clones que reescriben la descripción
+# pero reutilizan imágenes (ver experimentos/vecinos_imagen).
+UMBRAL_IMAGEN_IDENTICA = 0.96
 URL_HEADER = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg"
 # Nombres legibles de cada señal, para mostrar en la app en vez del nombre técnico
 NOMBRES_SENALES = {
@@ -103,6 +107,28 @@ class BuscadorModelo:
         self.E = E
         self.senales = CalculadoraSenales(self.tfidf.X, E, self.df, joblib.load(carpeta / "imagenes.joblib"))
         self.k_vecinos = int(self.config.get("K_VECINOS", 10))
+        self._indexar_imagenes()
+
+    def _indexar_imagenes(self) -> None:
+        """Junta los vectores CLIP de todas las imágenes en una matriz, para buscar por imagen.
+
+        `self.imagenes` tiene una fila por imagen y `self.dueno_imagen` dice de qué juego es.
+        Cada juego queda apuntando a su trozo de la matriz, así los vectores no se guardan dos veces.
+        """
+        img = self.senales.img
+        trozos, dueno, partes, inicio = [], [], {}, 0
+        for pos, x in enumerate(img):
+            if x is None or id(x) in partes:       # sin imágenes, o el mismo appid repetido en el catálogo
+                continue
+            e = np.asarray(x["emb"], dtype=np.float32)
+            partes[id(x)] = (x, inicio, inicio + len(e))
+            trozos.append(e)
+            dueno.extend([pos] * len(e))
+            inicio += len(e)
+        self.imagenes = np.vstack(trozos) if trozos else np.zeros((0, 0), dtype=np.float32)
+        self.dueno_imagen = np.asarray(dueno, dtype=int)
+        for x, ini, fin in partes.values():
+            x["emb"] = self.imagenes[ini:fin]
 
     # ---- búsqueda ------------------------------------------------------------
     @property
@@ -116,12 +142,34 @@ class BuscadorModelo:
         return self.modelo_A.predict_proba(pares[self.FEAT_A])[:, 1]
 
     def vecinos(self, q: int) -> list[int]:
-        """Los K más parecidos por palabras (TF-IDF) unidos a los K más parecidos por significado."""
+        """Juegos que vale la pena comparar con q.
+
+        Los K más parecidos por palabras (TF-IDF), los K más parecidos por significado y, además,
+        los que tienen una imagen casi idéntica (hasta K). Sin lo último, un clon que reescribe la
+        descripción pero reutiliza las capturas podía no aparecer nunca.
+        """
         k = min(self.k_vecinos, len(self.df) - 1)
         s_tfidf = linear_kernel(self.tfidf.X[q], self.tfidf.X).ravel()
         s_emb = self.E @ self.E[q]
         s_tfidf[q] = s_emb[q] = -np.inf
-        return sorted(set(np.argsort(-s_tfidf)[:k]) | set(np.argsort(-s_emb)[:k]))
+        por_texto = set(np.argsort(-s_tfidf)[:k]) | set(np.argsort(-s_emb)[:k])
+        return sorted(int(j) for j in por_texto | set(self.vecinos_imagen(q, k)))
+
+    def vecinos_imagen(self, q: int, k: int | None = None,
+                       umbral: float = UMBRAL_IMAGEN_IDENTICA) -> list[int]:
+        """Hasta k juegos con alguna imagen casi idéntica a alguna de q, del más al menos parecido."""
+        k = self.k_vecinos if k is None else k
+        img = self.senales.img[q]
+        if img is None or not len(self.imagenes) or k <= 0:
+            return []
+        s = (self.imagenes @ np.asarray(img["emb"], dtype=np.float32).T).max(axis=1)
+        por_juego = np.full(len(self.df), -np.inf, dtype=np.float32)
+        np.maximum.at(por_juego, self.dueno_imagen, s)
+        por_juego[q] = -np.inf
+        k = min(k, len(por_juego) - 1)
+        top = np.argpartition(-por_juego, k)[:k] if k < len(por_juego) else np.arange(len(por_juego))
+        top = top[np.argsort(-por_juego[top])]
+        return [int(j) for j in top if por_juego[j] >= umbral]
 
     def candidatos(self, q: int, k: int = 10) -> pd.DataFrame:
         """Tabla de candidatos para el juego q, ordenada por probabilidad del modelo.

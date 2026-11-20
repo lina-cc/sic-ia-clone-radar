@@ -70,7 +70,7 @@ Revisar el catálogo a mano es imposible (~138 mil juegos), y una búsqueda por 
 </p>
 
 1. **Datos:** toma el catálogo público de Steam (137.976 juegos tras la limpieza) con descripción, imágenes, tags, desarrollador y fecha.
-2. **Candidatos:** para cada juego busca sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings). Así no compara todos contra todos.
+2. **Candidatos:** para cada juego busca sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings). En la app se suman los juegos con una imagen casi idéntica, aunque el texto sea otro. Así no compara todos contra todos.
 3. **Señales:** para cada par calcula 8 medidas de parecido: texto, imágenes, título, tags, fechas y estudio.
 4. **Modelo:** una regresión logística combina las señales en una **probabilidad de que el par merezca revisión**.
 5. **App:** muestra los candidatos ordenados, el valor de cada señal, las imágenes lado a lado y **por qué** el modelo dio esa probabilidad.
@@ -143,7 +143,7 @@ Al elegir un candidato, la app muestra qué señales suben y cuáles bajan la pr
 
 Qué pasa cuando alguien busca ***Stardew Valley*** (ConcernedApe, 2016). Son valores reales del Modelo A.
 
-**Paso 1 · Candidatos.** De 137.976 juegos, el sistema se queda con los vecinos más cercanos por palabras y por significado: hasta 20 juegos en vez de todo el catálogo.
+**Paso 1 · Candidatos.** De 137.976 juegos, el sistema se queda con los vecinos más cercanos por palabras y por significado: hasta 20 juegos en vez de todo el catálogo. En la app se agregan los que tienen una imagen casi idéntica, para no perder los clones que reescriben la descripción pero reutilizan las capturas.
 
 **Paso 2 · Señales.** Para cada candidato se miden las señales. Estas son las del primero de la lista, *Cornucopia®* (2023, otro estudio):
 
@@ -309,7 +309,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-77 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
+79 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, candidatos por imagen casi idéntica, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
 
 ---
 
