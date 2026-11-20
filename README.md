@@ -309,7 +309,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-74 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso) y el análisis de reseñas (expresiones de copia, menciones de otros juegos). Se corren solos en GitHub Actions en cada push.
+77 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -340,6 +340,7 @@ sic-ia-clone-radar/
 │   ├── GUIA_ETIQUETADO.md                # Criterios y flujo para etiquetar pares.
 │   └── img/                              # Logo e imágenes de este README.
 ├── despliegue/oci/                       # Servidor gratuito en Oracle Cloud: instalación, HTTPS y comandos para reentrenar.
+├── experimentos/                         # Ideas que todavía no entran al modelo: casi idénticos, RAM++, código, trailers.
 ├── tests/                                # Tests automáticos (pytest).
 ├── Documentos/                           # Informe, pitch y hoja de trabajo del equipo.
 ├── .github/workflows/tests.yml           # Corre los tests en cada push (GitHub Actions).

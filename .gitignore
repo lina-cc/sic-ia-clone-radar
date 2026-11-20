@@ -30,3 +30,6 @@ Documentos/SIC2026_IA_Documento_Maestro.pdf
 # Descargas de Drive (paquetes del modelo comprimidos)
 *.zip
 .gradio/
+
+# Resultados de experimentos (tienen datos de Steam)
+experimentos/*/salidas/

@@ -31,6 +31,7 @@ Dado un videojuego de Steam, FairPlay AI busca otros juegos que se le parecen en
 | `FairPlay_AI_Resenas.ipynb` | Busca pares sospechosos en las reseñas de los usuarios y deja la lista en Drive. |
 | `Primera fase práctica/resenas.py` | Lógica de ese notebook: detectar expresiones de copia y qué otros juegos nombra una reseña. |
 | `Primera fase práctica/cola.py` | Cola de revisión: elige el próximo par sin etiquetar y cuenta el progreso de cada persona y del equipo. |
+| `experimentos/` | Ideas que todavía no son parte del modelo, cada una con su README y sus reglas. Ver su [README](../experimentos/README.md). |
 | `despliegue/oci/` | Servidor gratuito en Oracle Cloud: instalación, HTTPS, contraseña y comandos para reentrenar. Ver su [README](../despliegue/oci/README.md). |
 | `FairPlay_AI_Demo.ipynb` | Abre la app desde Colab con un enlace temporal (alternativa al servidor). |
 | `tests/` | Tests automáticos de la línea base, las señales, el modelo, la cola, las reseñas, la app y la interfaz. |
