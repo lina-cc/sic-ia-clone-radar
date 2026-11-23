@@ -70,7 +70,7 @@ Revisar el catálogo a mano es imposible (~138 mil juegos), y una búsqueda por 
 </p>
 
 1. **Datos:** toma el catálogo público de Steam (137.976 juegos tras la limpieza) con descripción, imágenes, tags, desarrollador y fecha.
-2. **Candidatos:** para cada juego busca sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings). Así no compara todos contra todos.
+2. **Candidatos:** para cada juego busca sus vecinos más cercanos por palabras (TF-IDF) y por significado (embeddings). En la app se suman los juegos con una imagen casi idéntica, aunque el texto sea otro. Así no compara todos contra todos.
 3. **Señales:** para cada par calcula 8 medidas de parecido: texto, imágenes, título, tags, fechas y estudio.
 4. **Modelo:** una regresión logística combina las señales en una **probabilidad de que el par merezca revisión**.
 5. **App:** muestra los candidatos ordenados, el valor de cada señal, las imágenes lado a lado y **por qué** el modelo dio esa probabilidad.
@@ -143,7 +143,7 @@ Al elegir un candidato, la app muestra qué señales suben y cuáles bajan la pr
 
 Qué pasa cuando alguien busca ***Stardew Valley*** (ConcernedApe, 2016). Son valores reales del Modelo A.
 
-**Paso 1 · Candidatos.** De 137.976 juegos, el sistema se queda con los vecinos más cercanos por palabras y por significado: hasta 20 juegos en vez de todo el catálogo.
+**Paso 1 · Candidatos.** De 137.976 juegos, el sistema se queda con los vecinos más cercanos por palabras y por significado: hasta 20 juegos en vez de todo el catálogo. En la app se agregan los que tienen una imagen casi idéntica, para no perder los clones que reescriben la descripción pero reutilizan las capturas.
 
 **Paso 2 · Señales.** Para cada candidato se miden las señales. Estas son las del primero de la lista, *Cornucopia®* (2023, otro estudio):
 
@@ -214,33 +214,52 @@ El círculo se cierra cuando las etiquetas vuelven al notebook: así se entrena 
 
 ## 📊 Resultados
 
-Corrida completa en Google Colab (GPU T4), 4 de noviembre de 2026, sobre **137.976 juegos** de Steam. Todavía **no hay etiquetas humanas**, así que lo que se mide es el **Modelo A** con validación cruzada sobre 3.000 pares con etiquetas débiles (750 positivos):
+Corrida completa en Google Colab (GPU T4), 23 de noviembre de 2026, sobre **137.976 juegos** de Steam, con 3.000 pares de etiquetas automáticas y **88 pares revisados a mano** por el equipo (17 coincidencias relevantes y 71 casos legítimos o descartados).
+
+### Con etiquetas humanas (la evaluación que vale)
 
 <p align="center">
-  <img src="docs/img/resultados.png" alt="PR-AUC: azar 0,247, regresión logística 0,363, gradient boosting 0,415. Precisión@20: 0,30, 0,45 y 0,50" width="820">
+  <img src="docs/img/resultados.png" alt="Con 88 pares revisados a mano. PR-AUC: TF-IDF 0,225, embeddings 0,279, Modelo A 0,447, Modelo B 0,388. Precisión@20: 0,10, 0,25, 0,40 y 0,50. Azar: cerca de 0,19" width="820">
 </p>
+
+| Método | PR-AUC | ROC-AUC | Precisión@20 |
+|---|---|---|---|
+| Línea base: solo TF-IDF | 0,225 | 0,592 | 0,10 |
+| Embeddings de texto | 0,279 | 0,670 | 0,25 |
+| **Modelo A** (sin texto, etiquetas automáticas) | **0,447** | **0,800** | 0,40 |
+| **Modelo B** (todas las señales, etiquetas humanas) | 0,388 | 0,792 | **0,50** |
+| Azar (referencia) | ≈ 0,19 | 0,50 | ≈ 0,19 |
+
+* **El Modelo A duplica a la línea base de texto** (PR-AUC 0,45 contra 0,23), en pares que **nunca vio**: se entrenó solo con etiquetas automáticas.
+* **El Modelo B** se evalúa con validación cruzada en 5 partes sobre los mismos 88 pares. En el conjunto queda por debajo del A, pero arriba de la lista acierta más: **la mitad de sus 20 primeros pares son coincidencias reales**. Con 17 positivos aprende poco; es una primera versión.
+* **La app publicada usa el Modelo B por defecto** desde el 23 de noviembre. En las pestañas de búsqueda y comparación se puede elegir el Modelo A, que ordena mejor el conjunto.
+* ⚠️ **Son 88 pares:** los números se mueven bastante con pocos datos. El notebook ya dejó un **lote nuevo de 100 pares** para seguir etiquetando.
+
+**De dónde salen estos números:** de la **sección 7** del [notebook principal](FairPlay_AI_Clasificador_Pares.ipynb) (*Evaluación con etiquetas humanas*). Las etiquetas están en `data/lote_etiquetado.xlsx`, que no se sube al repositorio.
+
+### Con etiquetas automáticas (Modelo A)
+
+Validación cruzada por familias sobre los 3.000 pares con etiquetas débiles (750 positivos), sección 6 del notebook:
 
 | Modelo | PR-AUC | ROC-AUC | Precisión@20 |
 |---|---|---|---|
-| Modelo A · regresión logística | 0,363 | 0,664 | 0,45 |
-| Modelo de comparación · gradient boosting | 0,415 | 0,722 | 0,50 |
+| Modelo A · regresión logística | 0,358 | 0,666 | 0,25 |
+| Modelo de comparación · gradient boosting | 0,459 | 0,752 | 0,60 |
 | Azar (referencia) | 0,247 | 0,499 | 0,30 |
 
-**Sobre el gradient boosting:** es un **modelo de comparación**. Se entrenó y se evaluó igual que la regresión logística: mismos 3.000 pares, mismas señales y misma validación cruzada por familias (`HistGradientBoostingClassifier` de scikit-learn, con árboles de profundidad 3). Rinde algo mejor (1 acierto más de cada 20), pero la app usa la regresión logística porque permite explicar cada resultado. Con las etiquetas humanas se vuelven a comparar los dos.
+**Sobre el gradient boosting:** es un **modelo de comparación**. Se entrenó y se evaluó igual que la regresión logística: mismos 3.000 pares, mismas señales y misma validación cruzada por familias (`HistGradientBoostingClassifier` de scikit-learn, con árboles de profundidad 3). Con las etiquetas automáticas rinde mejor, pero la app usa la regresión logística porque permite explicar cada resultado. Todavía no se compara con etiquetas humanas.
 
-**De dónde salen estos números:** de la **sección 6** del [notebook principal](FairPlay_AI_Clasificador_Pares.ipynb) (*Modelo A: reconoce clones sin mirar el texto*), que imprime esta tabla al terminar la validación cruzada. Los gráficos de este README se dibujaron con esos valores. Cualquiera puede repetir la corrida en Colab con el botón de arriba; la sección 12 del notebook explica cómo contar los resultados.
-
-**¿Qué señales pesan más?** En la regresión logística, la que más empuja es la coincidencia de géneros y tags, seguida por el parecido de las imágenes:
+**¿Qué señales pesan más?** En el Modelo A, la que más empuja es la coincidencia de géneros y tags, seguida por el parecido de las imágenes:
 
 <p align="center">
-  <img src="docs/img/pesos_senales.png" alt="Coeficientes: géneros y tags 1,02; imágenes CLIP 0,27; hash 0,14; títulos 0,12; distancia entre fechas 0,05" width="680">
+  <img src="docs/img/pesos_senales.png" alt="Coeficientes: géneros y tags 1,02; imágenes CLIP 0,26; hash 0,14; títulos 0,11; distancia entre fechas 0,06" width="680">
 </p>
 
 **Cómo leer estos números:**
 
-* ✅ **Lo que muestran:** sin mirar el texto, el modelo ordena los pares mejor que el azar (+47 % en PR-AUC, de 6 a 9 aciertos de cada 20 con la regresión logística). Las imágenes aportan información real.
-* ⚠️ **Lo que no muestran:** las etiquetas débiles salen del texto, así que esto no mide "detectar copias". La evaluación que vale para el informe es la del **Modelo B con etiquetas humanas** (pendiente: ver [próximos pasos](#️-estado-del-proyecto-y-próximos-pasos)).
-* 🚫 **Corrida descartada:** una versión anterior dio PR-AUC 0,669, pero estaba inflada: a los negativos les faltaba la imagen mucho más que a los positivos y el modelo aprendió "sin imagen = no es copia". Se corrigió entrenando solo con pares que tienen imagen. **No citar ese número.**
+* ✅ **Lo que muestran:** con pares revisados por personas, combinar imágenes, título, tags y fechas ordena mucho mejor que comparar solo el texto. Las imágenes aportan información real.
+* ⚠️ **Lo que no muestran:** que el sistema detecte copias. Mide si pone arriba los pares que el equipo consideró dignos de revisión. Las etiquetas automáticas, además, salen del texto: miden "texto casi idéntico", no "copia".
+* 🚫 **Corrida descartada:** una versión anterior dio PR-AUC 0,669 con etiquetas automáticas, pero estaba inflada: a los negativos les faltaba la imagen mucho más que a los positivos y el modelo aprendió "sin imagen = no es copia". Se corrigió entrenando solo con pares que tienen imagen. **No citar ese número.**
 
 ---
 
@@ -285,12 +304,12 @@ Sin más pasos funciona la **línea base TF-IDF**. Para la pestaña **Modelo ent
 | Pestaña | Para qué sirve |
 |---|---|
 | **Etiquetar pares** | La cola de revisión: muestra dos juegos lado a lado, se decide con un clic y aparece el siguiente. Lleva la cuenta de cada persona y de lo que le falta al equipo para el Modelo B. Permite saltar un par y deshacer la última etiqueta. |
-| **Buscar un juego** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. |
-| **Comparar dos juegos** | Un par concreto: los dos juegos lado a lado, lo que opina el modelo y la etiqueta. |
+| **Buscar un juego** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. Se puede elegir con qué modelo ordenar (A o B). |
+| **Comparar dos juegos** | Un par concreto: los dos juegos lado a lado, lo que opina cada modelo y la etiqueta. |
 | Línea base (solo palabras) | La referencia TF-IDF: buscar similares, comparar dos juegos por sus palabras y buscar a partir de un texto nuevo (en inglés). |
 | Ayuda | Cómo etiquetar en 3 pasos, qué etiqueta poner y para qué sirve cada pestaña. |
 
-Arriba se escribe **tu nombre** una sola vez (el navegador lo recuerda) y un aviso indica si la app usa el Modelo A o el B. En las tres primeras pestañas se puede guardar un caso (*Posible copia*, *Similar*, *No similar*) que se suma a las etiquetas humanas.
+Arriba se escribe **tu nombre** una sola vez (el navegador lo recuerda) y un aviso indica qué modelo usa la app por defecto (el B, si el paquete lo trae). En **Buscar un juego** y **Comparar dos juegos** se puede cambiar al otro modelo para ver cómo cambia el orden. En las tres primeras pestañas se puede guardar un caso (*Posible copia*, *Similar*, *No similar*) que se suma a las etiquetas humanas.
 
 ### Opción 5 · Ayudar a etiquetar
 
@@ -309,7 +328,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-77 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
+83 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, candidatos por imagen casi idéntica, elegir el Modelo A o el B, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
 
 ---
 
@@ -378,6 +397,7 @@ Por qué se eligió cada pieza, y lo que se descartó a propósito, en la [Guía
 ## 🚧 Limitaciones
 
 * Las etiquetas débiles salen del texto: miden "texto casi idéntico", no "copia". Por eso hace falta el Modelo B con etiquetas humanas.
+* El Modelo B se entrenó con solo 88 pares (17 positivos), etiquetados por una persona. Sus números son preliminares y no hay todavía una medida de acuerdo entre etiquetadores.
 * El TF-IDF está pensado para inglés. Las descripciones en otros idiomas se filtran de las etiquetas débiles.
 * Pocas imágenes por juego: header y 3 capturas para los ~9 mil juegos de entrenamiento, y solo el header para el resto (con una sola imagen, `img_cos` sale algo más bajo). No se analizan videos ni jugabilidad.
 * La señal más fuerte del Modelo A es la coincidencia de tags, que también separa géneros: el modelo puede sobrevalorar pares del mismo género.
@@ -398,9 +418,10 @@ Lista completa en la [Guía técnica §11](docs/GUIA_TECNICA.md#11-limitaciones-
 | App publicada 24/7 con HTTPS y contraseña (Oracle Cloud) | nov 2026 | ✅ Lista |
 | App rediseñada para etiquetar: cola de revisión, progreso del equipo, saltar y deshacer | nov 2026 | ✅ Lista |
 | Búsqueda de pares sospechosos en las reseñas de los usuarios | nov 2026 | ✅ Primera corrida hecha |
-| Lote de 100 pares para etiquetar | nov 2026 | ✅ Generado · 🔄 etiquetado en curso |
+| Lote de 100 pares para etiquetar | nov 2026 | ✅ Etiquetado (93 pares útiles, 88 en el catálogo) |
 | **Modelo base funcionando** | 24 nov | ✅ Modelo A |
-| Modelo B y evaluación con etiquetas humanas | 27 nov | ⏳ Espera las etiquetas |
+| Modelo B y evaluación con etiquetas humanas | 27 nov | ✅ Entrenado el 23 nov · en la app publicada |
+| Segundo lote de etiquetas (más positivos para el Modelo B) | dic 2026 | 💡 Lote nuevo de 100 pares listo |
 | **Demo y README** | 30 nov | 🔄 En revisión |
 | **Presentación final (7 min)** | 3 dic | 🔄 En preparación |
 
@@ -427,7 +448,7 @@ Mostró que **combinar señales ayuda si la imagen es informativa**, pero los "e
 No. Calcula qué pares conviene que una persona revise primero. Decidir si hay copia requiere criterio humano y, a veces, legal.
 
 **¿Por qué una regresión logística y no un modelo más potente?**
-Porque se puede explicar: el aporte de cada señal es una multiplicación, y la app lo muestra. El *gradient boosting* rinde algo mejor (PR-AUC 0,415 frente a 0,363), pero no permite justificar cada resultado con esa claridad. En un sistema que apoya decisiones delicadas, se priorizó entender por qué.
+Porque se puede explicar: el aporte de cada señal es una multiplicación, y la app lo muestra. Con las etiquetas automáticas, el *gradient boosting* rinde mejor (PR-AUC 0,459 frente a 0,358), pero no permite justificar cada resultado con esa claridad. En un sistema que apoya decisiones delicadas, se priorizó entender por qué.
 
 **¿Por qué el Modelo A no mira el texto?**
 Sus etiquetas automáticas se crearon con una regla sobre el texto. Si el modelo viera el texto, solo aprendería esa regla. Al ocultárselo, tiene que aprender de imágenes, títulos y tags.

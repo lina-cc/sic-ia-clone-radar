@@ -154,14 +154,14 @@ Es un problema de **clasificación binaria sobre pares**, no sobre juegos indivi
 ### 6.3 Por qué hay dos modelos
 
 * **Modelo A (sin texto).** Se entrena con las etiquetas débiles **sin ver ninguna señal de texto**. Si las viera, aprendería la regla "texto idéntico = clon", que ya sabemos y que no sirve cuando el clon reescribe la descripción. Sin texto, el modelo tiene que descubrir qué *otras* señales (imágenes, título, tags, fechas) acompañan a un clon.
-* **Modelo B (todas las señales).** Se entrena **solo con etiquetas humanas**. Se activa cuando hay al menos 10 pares de cada clase.
+* **Modelo B (todas las señales).** Se entrena **solo con etiquetas humanas**. Se activa cuando hay al menos 10 pares de cada clase. **Si el paquete trae Modelo B, la app lo usa por defecto**, y en *Buscar un juego* y *Comparar dos juegos* se puede elegir el A (`modelo="A"` en `candidatos()` y `explicar()`); si no hay B, usa el A y no muestra el selector. *Etiquetar pares* usa siempre el modelo por defecto. Desde el 23 de noviembre de 2026 la app publicada usa el Modelo B.
 
 Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se puede mostrar y explicar ("la imagen idéntica empujó la probabilidad hacia arriba"). Como **modelo de comparación** se entrena y evalúa igual un *gradient boosting*, para ver cuánto gana un modelo más flexible. Gana un poco (ver 6.7), pero no se puede explicar señal por señal, así que la app usa la regresión logística.
 
 ### 6.4 Cómo se evalúa sin hacer trampa
 
 * **Validación cruzada por grupos (`GroupKFold`).** Los juegos de una misma "familia" de clones quedan todos en el mismo grupo. Así el modelo nunca se evalúa con un clon cuya familia ya vio al entrenar.
-* **La evaluación que vale para el informe es la de las etiquetas humanas** (sección 7 del notebook), comparada con la **línea base**: usar solo `tfidf_cos`, que es lo que hace la app hoy.
+* **La evaluación que vale para el informe es la de las etiquetas humanas** (sección 7 del notebook), comparada con la **línea base**: ordenar solo por `tfidf_cos`, lo que haría una búsqueda por palabras.
 
 ### 6.5 Cómo llega el modelo a la app
 
@@ -187,17 +187,33 @@ flowchart LR
 | **ROC-AUC** | Probabilidad de que un positivo al azar quede por encima de un negativo al azar | Referencia estándar. |
 | **Precisión@20** | De los 20 pares que el modelo pone primero, cuántos son realmente positivos | Es lo que vive la persona usuaria: revisa los primeros resultados. |
 
-### 6.7 Resultados actuales (Modelo A)
+### 6.7 Resultados actuales (23 de noviembre de 2026)
 
-Validación cruzada por grupos sobre las etiquetas débiles, sin usar señales de texto (sección 6 del notebook principal):
+**Con etiquetas humanas** (sección 7 del notebook): 88 pares revisados a mano, 17 coincidencias relevantes y 71 casos legítimos o descartados. Otros 5 pares del lote se descartaron porque uno de los juegos no está en el catálogo.
+
+| Método | PR-AUC | ROC-AUC | Precisión@20 |
+|---|---|---|---|
+| Línea base: solo `tfidf_cos` | 0,225 | 0,592 | 0,10 |
+| Embeddings de texto (`emb_cos`) | 0,279 | 0,670 | 0,25 |
+| **Modelo A** (sin texto, etiquetas automáticas) | **0,447** | **0,800** | 0,40 |
+| **Modelo B** (todas las señales, validación cruzada en 5 partes) | 0,388 | 0,792 | **0,50** |
+| Azar (la proporción de positivos) | ≈ 0,19 | 0,50 | ≈ 0,19 |
+
+Cómo leerlo:
+
+* El Modelo A **no vio estos pares** al entrenar, así que su fila es una evaluación limpia: duplica a la línea base de texto.
+* El Modelo B se evalúa con validación cruzada estratificada (no por familias: con 17 positivos no alcanza para agrupar). En el conjunto queda por debajo del A, pero arriba de la lista acierta más. Con tan pocos positivos los números varían bastante: al repetir la validación con 20 particiones distintas, su PR-AUC fue de 0,39 a 0,51.
+* En el Modelo B pesan más el **título** (0,98) y los **tags** (0,99), seguidos por la cercanía de fechas (−0,56: lanzamientos más cercanos, más probable) y las imágenes (0,37). Las señales de descripción casi no pesan (`tfidf_cos` −0,05, `emb_cos` 0,07). En estos pares, los que el equipo marcó como relevantes no se distinguen por copiar el texto.
+
+**Con etiquetas automáticas** (sección 6, Modelo A): validación cruzada por grupos sobre 3.000 pares, sin señales de texto.
 
 | Modelo | PR-AUC | ROC-AUC | Precisión@20 |
 |---|---|---|---|
 | Al azar (referencia) | 0,247 | 0,499 | 0,30 |
-| **Modelo A · regresión logística** (el de la app) | 0,363 | 0,664 | 0,45 |
-| Modelo de comparación · gradient boosting | 0,415 | 0,722 | 0,50 |
+| **Modelo A · regresión logística** | 0,358 | 0,666 | 0,25 |
+| Modelo de comparación · gradient boosting | 0,459 | 0,752 | 0,60 |
 
-Cómo leerlo: el modelo ordena mejor que el azar usando solo imágenes, título, tags y fechas, pero todavía falla bastante. Estos números miden qué tan bien **reproduce las etiquetas débiles**, no qué tan bien detecta copias. La evaluación con etiquetas humanas (sección 7 del notebook) se llena cuando el equipo termine de etiquetar.
+Estos números miden qué tan bien el modelo **reproduce las etiquetas débiles**, no qué tan bien detecta copias. Por eso la tabla que vale para el informe es la de arriba. La corrida del 4 de noviembre dio 0,363 y 0,415 de PR-AUC: las cifras cambian un poco entre corridas porque las etiquetas débiles se arman con una muestra al azar.
 
 ### 6.8 La cola de revisión
 
@@ -248,7 +264,7 @@ Necesita el parquet en `Primera fase práctica/data/juegos_texto_en.parquet`.
 Para activar las pestañas del modelo (**Etiquetar pares**, **Buscar un juego** y **Comparar dos juegos**), copiar la carpeta `salidas/paquete_app` que genera el notebook (sección 11) a `Primera fase práctica/modelo/`. En **Buscar un juego**:
 
 1. Se escribe el título de un juego del catálogo y se pulsa *Buscar*.
-2. La tabla muestra los candidatos ordenados por **probabilidad de revisar** y el valor de cada señal; la galería muestra sus imágenes de Steam.
+2. La tabla muestra los candidatos ordenados por **probabilidad de revisar**. Los candidatos son los 10 juegos más parecidos por palabras, los 10 más parecidos por significado y los que tienen una imagen casi idéntica (coseno CLIP ≥ 0,96, como máximo 10). Lo último solo está en la app; el notebook arma los pares de entrenamiento solo con el texto. Ver [`experimentos/vecinos_imagen/`](../experimentos/vecinos_imagen/). La tabla muestra también el valor de cada señal; la galería muestra sus imágenes de Steam.
 3. En *Explicar un candidato* se elige uno: aparece qué señales subieron o bajaron la probabilidad y las dos imágenes lado a lado.
 4. En *Guardar este candidato como caso* se etiqueta, y esa etiqueta vuelve al notebook como dato humano.
 

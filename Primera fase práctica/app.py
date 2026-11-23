@@ -134,7 +134,8 @@ def encabezado(modelo=None) -> str:
     if modelo is None:
         chip = ""
     elif modelo.usa_modelo_B:
-        chip = '<span class="fp-chip fp-chip-b">Modelo B · entrenado con etiquetas del equipo</span>'
+        chip = ('<span class="fp-chip fp-chip-b">Modelo B · entrenado con etiquetas del equipo</span>'
+                ' <span class="fp-chip">También puedes elegir el Modelo A</span>')
     else:
         chip = '<span class="fp-chip">Modelo A · etiquetas automáticas</span>'
     return (f'<div class="fp-header">{logo}<div><div class="fp-name">FairPlay <span>AI</span></div>'
@@ -378,12 +379,31 @@ def crear_app(buscador: BuscadorTfidf, ruta_casos: Path, modelo=None) -> gr.Bloc
     return demo
 
 
+NOMBRE_MODELO = {"B": "Modelo B · etiquetas del equipo", "A": "Modelo A · sin texto"}
+DESCRIPCION_MODELO = {"B": "Modelo B: todas las señales, entrenado con etiquetas humanas",
+                      "A": "Modelo A: imágenes, título, tags y fechas, entrenado con etiquetas automáticas"}
+
+
+def selector_modelo(M, **kwargs) -> gr.Radio:
+    """Elegir con qué modelo ordenar y explicar. Solo se muestra si el paquete trae los dos."""
+    disponibles = M.modelos_disponibles
+    return gr.Radio([(NOMBRE_MODELO[m], m) for m in disponibles], value=disponibles[0], label="Modelo",
+                    visible=len(disponibles) > 1, elem_classes="fp-selector-modelo", **kwargs)
+
+
+def probabilidades_de_ambos(M, a: int, b: int) -> str:
+    """Línea con la probabilidad de cada modelo, para compararlos en un mismo par."""
+    if len(M.modelos_disponibles) < 2:
+        return ""
+    partes = [f'<span class="fp-chip">{NOMBRE_MODELO[m]}: <b>{M.explicar(a, b, m)[0]:.2f}</b></span>'
+              for m in M.modelos_disponibles]
+    return '<div class="fp-ambos">Probabilidad de revisar según cada modelo: ' + " ".join(partes) + "</div>"
+
+
 def agregar_pestana_modelo(M, anotador, registrar) -> None:
     """Pestaña principal: candidatos del modelo entrenado, explicación de un par y veredicto."""
     from modelo import COLUMNAS_CANDIDATOS
 
-    cual = ("Modelo B: todas las señales, entrenado con etiquetas humanas" if M.usa_modelo_B
-            else "Modelo A: imágenes, título, tags y fechas, entrenado con etiquetas automáticas")
     vacia = pd.DataFrame(columns=COLUMNAS_CANDIDATOS)
     inicio = vista.vacio("Escribe el nombre de un juego de Steam, o elige un ejemplo, "
                          "para ver qué juegos <b>vale la pena revisar</b> junto a él.")
@@ -393,7 +413,8 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
     def sin_opciones():
         return gr.Dropdown(choices=[], value=None)
 
-    def accion(nombre, k):
+    def accion(nombre, k, cual=None):
+        cual = M.elegir_modelo(cual)[0]
         nombre = (nombre or "").strip()
         if not nombre:
             return vista.vacio("Escribe el título de un juego."), vacia, None, sin_opciones()
@@ -405,12 +426,13 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
             if sug:
                 msg += "<br>¿Quizás buscabas " + ", ".join(f"<b>{escape(x)}</b>" for x in sug) + "?"
             return vista.vacio(msg), vacia, None, sin_opciones()
-        res = M.candidatos(q, int(k))
+        res = M.candidatos(q, int(k), cual)
         etiquetas = [f"{n + 1}. {j}" for n, j in enumerate(res["Juego"])]
-        estado = {"q": q, "consulta": M.tfidf.nombre(q),
+        estado = {"q": q, "consulta": M.tfidf.nombre(q), "modelo": cual,
                   "cands": {e: (int(p), str(j), float(pr))
                             for e, p, j, pr in zip(etiquetas, res["pos"], res["Juego"], res["Prob. revisar"])}}
-        html = vista.tarjetas(res, [M.url_imagen(int(p)) for p in res["pos"]], M.tfidf.nombre(q), cual)
+        html = vista.tarjetas(res, [M.url_imagen(int(p)) for p in res["pos"]], M.tfidf.nombre(q),
+                              DESCRIPCION_MODELO[cual])
         return (html, res[COLUMNAS_CANDIDATOS], estado,
                 gr.Dropdown(choices=etiquetas, value=etiquetas[0] if etiquetas else None))
 
@@ -418,7 +440,7 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
         if not estado or not elegido or elegido not in estado["cands"]:
             return inicio_exp
         pos, nombre, _ = estado["cands"][elegido]
-        prob, aportes = M.explicar(estado["q"], pos)
+        prob, aportes = M.explicar(estado["q"], pos, estado.get("modelo"))
         return vista.explicacion(estado["consulta"], nombre, prob, aportes,
                                  M.url_imagen(estado["q"]), M.url_imagen(pos))
 
@@ -434,6 +456,7 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
         nombre = gr.Textbox(label="Juego de Steam", placeholder="Ej.: Stardew Valley", scale=5)
         k = gr.Slider(3, 20, value=8, step=1, label="Candidatos", scale=2, min_width=160)
         boton = gr.Button("Buscar", variant="primary", scale=1, min_width=110, elem_classes="fp-btn")
+    cual = selector_modelo(M)
     ejemplos = [n for n in EJEMPLOS_MODELO if M.tfidf.existe(n)]
     botones = []
     if ejemplos:
@@ -457,10 +480,14 @@ def agregar_pestana_modelo(M, anotador, registrar) -> None:
     res_guardar = gr.Markdown()
 
     salidas = [resultados, tabla, estado, elegido]
-    boton.click(accion, [nombre, k], salidas, api_name="modelo_buscar")
-    nombre.submit(accion, [nombre, k], salidas)
+    entradas = [nombre, k, cual]
+    boton.click(accion, entradas, salidas, api_name="modelo_buscar")
+    nombre.submit(accion, entradas, salidas)
+    # Al cambiar de modelo se vuelve a ordenar, solo si ya hay una búsqueda
+    cual.change(lambda n, kk, c: accion(n, kk, c) if (n or "").strip() else tuple(gr.update() for _ in salidas),
+                entradas, salidas)
     for b, n in zip(botones, ejemplos):
-        b.click(lambda n=n: n, None, nombre).then(accion, [nombre, k], salidas)
+        b.click(lambda n=n: n, None, nombre).then(accion, entradas, salidas)
     elegido.change(explicar, [estado, elegido], explicacion, api_name="modelo_explicar")
     boton_guardar.click(guardar, [anotador, estado, elegido, etiq, com], res_guardar, api_name="guardar_modelo")
 
@@ -485,7 +512,7 @@ def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path):
     def pantalla(an, estado, mensaje=""):
         """Todo lo que se ve en la pestaña para el estado actual."""
         par = estado.get("par")
-        prog = vista.progreso(cola.progreso(an), an)
+        prog = vista.progreso(cola.progreso(an), an, M.usa_modelo_B)
         ultimos = vista.ultimos(cola.casos(), an)
         if par is None:
             return (prog, vista.vacio("No encontré más pares sin etiquetar por ahora. ¡Gracias!"),
@@ -546,7 +573,7 @@ def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path):
     gr.HTML(vista.pasos([("Compara", "Mira los dos juegos. Si dudas, ábrelos en Steam."),
                          ("Decide", "¿Un especialista debería mirar este par?"),
                          ("Sigue", "El caso se guarda y aparece el siguiente par.")]))
-    progreso = gr.HTML(vista.progreso(cola.progreso(None)))
+    progreso = gr.HTML(vista.progreso(cola.progreso(None), hay_modelo_B=M.usa_modelo_B))
     par_html = gr.HTML(vista.vacio("Cargando el primer par…"))
     estado = gr.State()
     botones = botones_decision()
@@ -593,7 +620,8 @@ def agregar_pestana_comparar(M, anotador, registrar) -> None:
                 msg += "<br>¿Quizás buscabas " + ", ".join(f"<b>{escape(x)}</b>" for x in sug) + "?"
             return None, msg
 
-    def comparar(a, b):
+    def comparar(a, b, cual=None):
+        cual = M.elegir_modelo(cual)[0]
         a, b = (a or "").strip(), (b or "").strip()
         if not a or not b:
             return vista.vacio("Escribe los dos títulos."), inicio_exp, None, ""
@@ -602,9 +630,10 @@ def agregar_pestana_comparar(M, anotador, registrar) -> None:
             return vista.vacio(error_a or error_b), inicio_exp, None, ""
         if i == j:
             return vista.vacio("Son el mismo juego. Escribe dos títulos distintos."), inicio_exp, None, ""
-        prob, aportes = M.explicar(i, j)
+        prob, aportes = M.explicar(i, j, cual)
         fa, fb = ficha(M, i), ficha(M, j)
-        exp = vista.explicacion(fa["nombre"], fb["nombre"], prob, aportes, None, None)
+        exp = (probabilidades_de_ambos(M, i, j)
+               + vista.explicacion(fa["nombre"], fb["nombre"], prob, aportes, None, None))
         return vista.par_cola(fa, fb), exp, {"a": fa["nombre"], "b": fb["nombre"], "prob": round(prob, 2)}, ""
 
     def decidir(etiqueta):
@@ -621,6 +650,7 @@ def agregar_pestana_comparar(M, anotador, registrar) -> None:
         a = gr.Textbox(label="Juego A", placeholder="Ej.: Stardew Valley", scale=3)
         b = gr.Textbox(label="Juego B", placeholder="Ej.: Coral Island", scale=3)
         boton = gr.Button("Comparar", variant="primary", scale=1, min_width=120, elem_classes="fp-btn")
+    cual = selector_modelo(M)
     par_html = gr.HTML(inicio)
     estado = gr.State()
     with gr.Accordion("Qué opina el modelo", open=True):
@@ -632,9 +662,12 @@ def agregar_pestana_comparar(M, anotador, registrar) -> None:
     mensaje = gr.Markdown()
 
     salidas = [par_html, exp, estado, mensaje]
-    boton.click(comparar, [a, b], salidas, api_name="modelo_comparar")
-    a.submit(comparar, [a, b], salidas)
-    b.submit(comparar, [a, b], salidas)
+    entradas = [a, b, cual]
+    boton.click(comparar, entradas, salidas, api_name="modelo_comparar")
+    a.submit(comparar, entradas, salidas)
+    b.submit(comparar, entradas, salidas)
+    cual.change(lambda x, y, c: comparar(x, y, c) if (x or "").strip() and (y or "").strip()
+                else tuple(gr.update() for _ in salidas), entradas, salidas)
     for etiqueta, bot in botones.items():
         bot.click(decidir(etiqueta), [anotador, estado, comentario], mensaje)
 

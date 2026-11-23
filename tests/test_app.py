@@ -111,3 +111,23 @@ def test_credenciales_solo_si_hay_clave(monkeypatch):
     assert app.credenciales() == ("fairplay", "secreta")
     monkeypatch.setenv("FAIRPLAY_USUARIO", "equipo")
     assert app.credenciales() == ("equipo", "secreta")
+
+
+def test_comparar_muestra_la_probabilidad_de_los_dos_modelos(paquete_modelo):
+    modelo = app.cargar_modelo(paquete_modelo)
+    q, j = modelo.tfidf.buscar("Escape the Walls"), modelo.tfidf.buscar("Escape Walls Obby")
+    html = app.probabilidades_de_ambos(modelo, q, j)
+    assert "Modelo A" in html and "Modelo B" in html
+    assert app.selector_modelo(modelo).visible
+
+
+def test_con_un_solo_modelo_no_hay_selector(paquete_modelo):
+    import joblib
+
+    ruta = paquete_modelo / "modelo_pares.joblib"
+    art = joblib.load(ruta)
+    art["modelo_B"] = None
+    joblib.dump(art, ruta)
+    modelo = app.cargar_modelo(paquete_modelo)
+    assert not app.selector_modelo(modelo).visible
+    assert app.probabilidades_de_ambos(modelo, 0, 1) == ""

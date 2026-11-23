@@ -7,8 +7,8 @@ App web en Gradio. Esta carpeta tiene el código de la app y la lógica que comp
 | Pestaña | Qué hace | Necesita el modelo |
 |---|---|---|
 | **Etiquetar pares** | La cola de revisión: un par, un clic, el siguiente. Con saltar y deshacer. | Sí |
-| **Buscar un juego** | Candidatos del modelo para un juego, con la **probabilidad de que el par merezca revisión humana**, la explicación de cada señal y las imágenes lado a lado. | Sí |
-| **Comparar dos juegos** | Un par concreto, lado a lado, con la opinión del modelo. | Sí |
+| **Buscar un juego** | Candidatos del modelo para un juego, con la **probabilidad de que el par merezca revisión humana**, la explicación de cada señal y las imágenes lado a lado. Un selector permite ordenar con el Modelo B (por defecto) o el A. | Sí |
+| **Comparar dos juegos** | Un par concreto, lado a lado, con la probabilidad de cada modelo y la explicación del elegido. | Sí |
 | **Línea base (solo palabras)** | TF-IDF: buscar similares, comparar dos juegos y texto nuevo, con las palabras que explican el parecido. | No |
 | **Ayuda** | Cómo usar la app y qué significa cada etiqueta. | No |
 
@@ -32,7 +32,7 @@ flowchart LR
 
 - `similitud.py`: la lógica (carga de datos, TF-IDF, búsqueda, comparación). No depende de Gradio.
 - `senales.py`: calcula las señales de un par de juegos, igual que el notebook. Sin interfaz ni GPU.
-- `modelo.py`: carga el paquete del modelo exportado por el notebook, busca candidatos y explica pares.
+- `modelo.py`: carga el paquete del modelo exportado por el notebook, busca candidatos y explica pares. Los candidatos salen del texto (palabras y significado) más los juegos con una imagen casi idéntica (coseno CLIP ≥ 0,96, constante `UMBRAL_IMAGEN_IDENTICA`).
 - `app.py`: la interfaz y el registro de casos. Arriba se escribe el nombre de quien etiqueta (el navegador lo recuerda). Pestañas: **Etiquetar pares** (la cola: un par, un clic, el siguiente; con saltar y deshacer), **Buscar un juego** (candidatos del modelo, con explicación y veredicto), **Comparar dos juegos** (un par concreto, lado a lado, con la opinión del modelo), **Línea base** (buscar similares, comparar y texto nuevo, solo con palabras) y **Ayuda**.
 - `vista.py`: la capa visual (tema, CSS, tarjetas de candidatos y barras de la explicación).
 - `cola.py`: la **cola de revisión**. Decide qué par mostrar a cada persona (sin repetir los ya etiquetados) y cuenta el progreso: pares por persona (meta: 30) y lo que le falta al equipo para entrenar el Modelo B (10 «Posible copia» y 10 «Similar» o «No similar»).
