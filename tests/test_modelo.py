@@ -110,3 +110,30 @@ def test_nombre_legible():
 def test_url_de_imagen_por_appid(paquete_modelo):
     m = BuscadorModelo(paquete_modelo)
     assert m.url_imagen(0).endswith("/apps/1/header.jpg")
+
+
+def test_se_puede_elegir_el_modelo_a_o_b(paquete_modelo):
+    m = BuscadorModelo(paquete_modelo)
+    assert m.modelos_disponibles == ["B", "A"]          # por defecto, el B
+    q, j = m.tfidf.buscar("Escape the Walls"), m.tfidf.buscar("Escape Walls Obby")
+    prob_a, aportes_a = m.explicar(q, j, "A")
+    prob_b, aportes_b = m.explicar(q, j, "b")           # no distingue mayúsculas
+    assert prob_b == m.explicar(q, j)[0]
+    # El Modelo A no mira el texto: sus señales no incluyen las de descripción
+    assert "Texto: mismas palabras" not in set(aportes_a["Señal"])
+    assert "Texto: mismas palabras" in set(aportes_b["Señal"])
+    res_a = m.candidatos(q, k=3, modelo="A")
+    assert res_a["Prob. revisar"].is_monotonic_decreasing
+    with pytest.raises(ValueError, match="desconocido"):
+        m.elegir_modelo("C")
+
+
+def test_sin_modelo_B_no_se_puede_elegir(paquete_modelo):
+    ruta = paquete_modelo / "modelo_pares.joblib"
+    art = joblib.load(ruta)
+    art["modelo_B"] = None
+    joblib.dump(art, ruta)
+    m = BuscadorModelo(paquete_modelo)
+    assert m.modelos_disponibles == ["A"]
+    with pytest.raises(ValueError, match="no trae Modelo B"):
+        m.elegir_modelo("B")

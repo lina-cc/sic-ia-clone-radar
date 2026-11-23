@@ -114,6 +114,8 @@ CSS = """
 .dark .fp-abrir{color:var(--primary-300)}
 .fp-chip{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;
   background:var(--background-fill-secondary);border:1px solid var(--border-color-primary)}
+.fp-ambos{margin:0 0 10px;font-size:13px;color:var(--body-text-color-subdued)}
+.fp-ambos .fp-chip{margin:4px 4px 0 0}
 .fp-chip-b{background:#e7f6ec;border-color:#9fd3b1;color:#1d6b3a}
 .dark .fp-chip-b{background:rgba(47,158,91,.18);border-color:rgba(47,158,91,.5);color:#8fdcaa}
 .fp-quien-nota{font-size:13px;color:var(--body-text-color-subdued);padding-top:26px;line-height:1.45}

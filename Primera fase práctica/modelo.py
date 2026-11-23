@@ -135,11 +135,24 @@ class BuscadorModelo:
     def usa_modelo_B(self) -> bool:
         return self.modelo_B is not None
 
-    def probabilidad(self, pares: pd.DataFrame) -> np.ndarray:
-        """Probabilidad de que el par merezca revisión: Modelo B si existe, si no Modelo A."""
-        if self.usa_modelo_B:
-            return self.modelo_B.predict_proba(pares[self.FEAT_B])[:, 1]
-        return self.modelo_A.predict_proba(pares[self.FEAT_A])[:, 1]
+    @property
+    def modelos_disponibles(self) -> list[str]:
+        """Modelos que trae el paquete, el que se usa por defecto primero."""
+        return ["B", "A"] if self.usa_modelo_B else ["A"]
+
+    def elegir_modelo(self, modelo: str | None = None) -> tuple[str, object, list[str]]:
+        """(letra, modelo, señales) del modelo pedido. Sin pedir nada: el B si existe, si no el A."""
+        letra = (modelo or self.modelos_disponibles[0]).strip().upper()
+        if letra not in ("A", "B"):
+            raise ValueError(f"Modelo desconocido: {modelo!r}. Usa 'A' o 'B'.")
+        if letra == "B" and not self.usa_modelo_B:
+            raise ValueError("Este paquete no trae Modelo B: faltan etiquetas humanas para entrenarlo.")
+        return (letra, self.modelo_B, self.FEAT_B) if letra == "B" else (letra, self.modelo_A, self.FEAT_A)
+
+    def probabilidad(self, pares: pd.DataFrame, modelo: str | None = None) -> np.ndarray:
+        """Probabilidad de que el par merezca revisión según el modelo elegido (por defecto, el B si existe)."""
+        _, m, feats = self.elegir_modelo(modelo)
+        return m.predict_proba(pares[feats])[:, 1]
 
     def vecinos(self, q: int) -> list[int]:
         """Juegos que vale la pena comparar con q.
@@ -171,15 +184,15 @@ class BuscadorModelo:
         top = top[np.argsort(-por_juego[top])]
         return [int(j) for j in top if por_juego[j] >= umbral]
 
-    def candidatos(self, q: int, k: int = 10) -> pd.DataFrame:
-        """Tabla de candidatos para el juego q, ordenada por probabilidad del modelo.
+    def candidatos(self, q: int, k: int = 10, modelo: str | None = None) -> pd.DataFrame:
+        """Tabla de candidatos para el juego q, ordenada por probabilidad del modelo elegido.
 
         Además de las columnas visibles, incluye `pos` (posición en el catálogo) y
         `appid`, que usa la app para mostrar imágenes y explicar un par.
         """
         otros = self.vecinos(q)
         p = self.senales.calcular([q] * len(otros), otros)
-        p["prob"] = self.probabilidad(p)
+        p["prob"] = self.probabilidad(p, modelo)
         p = p.sort_values(["prob", "tfidf_cos"], ascending=False).head(k)
         fecha = pd.to_datetime(self.df.loc[p["j"], "release_date"], errors="coerce")
         return pd.DataFrame({
@@ -200,14 +213,14 @@ class BuscadorModelo:
         }).reset_index(drop=True)
 
     # ---- explicación ----------------------------------------------------------
-    def explicar(self, a: int, b: int) -> tuple[float, pd.DataFrame]:
-        """Probabilidad del par y cuánto empuja cada señal (positivo = hacia "revisar").
+    def explicar(self, a: int, b: int, modelo: str | None = None) -> tuple[float, pd.DataFrame]:
+        """Probabilidad del par según el modelo elegido y cuánto empuja cada señal (positivo = hacia "revisar").
 
         Para una regresión logística, el aporte de cada señal es su valor estandarizado
         por su coeficiente: la suma de aportes (más el intercepto) da el logit.
         """
         fila = self.senales.calcular([a], [b])
-        modelo, feats = ((self.modelo_B, self.FEAT_B) if self.usa_modelo_B else (self.modelo_A, self.FEAT_A))
+        _, modelo, feats = self.elegir_modelo(modelo)
         prob = float(modelo.predict_proba(fila[feats])[0, 1])
         # El pipeline es: imputador (rellena vacíos y agrega indicadores) -> escalador -> logística
         nombres = modelo[:-1].get_feature_names_out(feats)

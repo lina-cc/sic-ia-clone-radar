@@ -154,7 +154,7 @@ Es un problema de **clasificación binaria sobre pares**, no sobre juegos indivi
 ### 6.3 Por qué hay dos modelos
 
 * **Modelo A (sin texto).** Se entrena con las etiquetas débiles **sin ver ninguna señal de texto**. Si las viera, aprendería la regla "texto idéntico = clon", que ya sabemos y que no sirve cuando el clon reescribe la descripción. Sin texto, el modelo tiene que descubrir qué *otras* señales (imágenes, título, tags, fechas) acompañan a un clon.
-* **Modelo B (todas las señales).** Se entrena **solo con etiquetas humanas**. Se activa cuando hay al menos 10 pares de cada clase. **Si el paquete trae Modelo B, la app ordena y explica con él**; si no, usa el Modelo A. Desde el 23 de noviembre de 2026 la app publicada usa el Modelo B.
+* **Modelo B (todas las señales).** Se entrena **solo con etiquetas humanas**. Se activa cuando hay al menos 10 pares de cada clase. **Si el paquete trae Modelo B, la app lo usa por defecto**, y en *Buscar un juego* y *Comparar dos juegos* se puede elegir el A (`modelo="A"` en `candidatos()` y `explicar()`); si no hay B, usa el A y no muestra el selector. *Etiquetar pares* usa siempre el modelo por defecto. Desde el 23 de noviembre de 2026 la app publicada usa el Modelo B.
 
 Ambos son **regresiones logísticas**: cada señal recibe un peso, y ese peso se puede mostrar y explicar ("la imagen idéntica empujó la probabilidad hacia arriba"). Como **modelo de comparación** se entrena y evalúa igual un *gradient boosting*, para ver cuánto gana un modelo más flexible. Gana un poco (ver 6.7), pero no se puede explicar señal por señal, así que la app usa la regresión logística.
 

@@ -232,7 +232,7 @@ Corrida completa en Google Colab (GPU T4), 23 de noviembre de 2026, sobre **137.
 
 * **El Modelo A duplica a la línea base de texto** (PR-AUC 0,45 contra 0,23), en pares que **nunca vio**: se entrenó solo con etiquetas automáticas.
 * **El Modelo B** se evalúa con validación cruzada en 5 partes sobre los mismos 88 pares. En el conjunto queda por debajo del A, pero arriba de la lista acierta más: **la mitad de sus 20 primeros pares son coincidencias reales**. Con 17 positivos aprende poco; es una primera versión.
-* **La app publicada usa el Modelo B** desde el 23 de noviembre (cuando el paquete trae Modelo B, la app ordena y explica con él).
+* **La app publicada usa el Modelo B por defecto** desde el 23 de noviembre. En las pestañas de búsqueda y comparación se puede elegir el Modelo A, que ordena mejor el conjunto.
 * ⚠️ **Son 88 pares:** los números se mueven bastante con pocos datos. El notebook ya dejó un **lote nuevo de 100 pares** para seguir etiquetando.
 
 **De dónde salen estos números:** de la **sección 7** del [notebook principal](FairPlay_AI_Clasificador_Pares.ipynb) (*Evaluación con etiquetas humanas*). Las etiquetas están en `data/lote_etiquetado.xlsx`, que no se sube al repositorio.
@@ -304,12 +304,12 @@ Sin más pasos funciona la **línea base TF-IDF**. Para la pestaña **Modelo ent
 | Pestaña | Para qué sirve |
 |---|---|
 | **Etiquetar pares** | La cola de revisión: muestra dos juegos lado a lado, se decide con un clic y aparece el siguiente. Lleva la cuenta de cada persona y de lo que le falta al equipo para el Modelo B. Permite saltar un par y deshacer la última etiqueta. |
-| **Buscar un juego** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. |
-| **Comparar dos juegos** | Un par concreto: los dos juegos lado a lado, lo que opina el modelo y la etiqueta. |
+| **Buscar un juego** | Candidatos para un juego, ordenados por probabilidad de revisión, con señales, imágenes y explicación. Se puede elegir con qué modelo ordenar (A o B). |
+| **Comparar dos juegos** | Un par concreto: los dos juegos lado a lado, lo que opina cada modelo y la etiqueta. |
 | Línea base (solo palabras) | La referencia TF-IDF: buscar similares, comparar dos juegos por sus palabras y buscar a partir de un texto nuevo (en inglés). |
 | Ayuda | Cómo etiquetar en 3 pasos, qué etiqueta poner y para qué sirve cada pestaña. |
 
-Arriba se escribe **tu nombre** una sola vez (el navegador lo recuerda) y un aviso indica si la app usa el Modelo A o el B. En las tres primeras pestañas se puede guardar un caso (*Posible copia*, *Similar*, *No similar*) que se suma a las etiquetas humanas.
+Arriba se escribe **tu nombre** una sola vez (el navegador lo recuerda) y un aviso indica qué modelo usa la app por defecto (el B, si el paquete lo trae). En **Buscar un juego** y **Comparar dos juegos** se puede cambiar al otro modelo para ver cómo cambia el orden. En las tres primeras pestañas se puede guardar un caso (*Posible copia*, *Similar*, *No similar*) que se suma a las etiquetas humanas.
 
 ### Opción 5 · Ayudar a etiquetar
 
@@ -328,7 +328,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-79 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, candidatos por imagen casi idéntica, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
+83 tests comprueban la línea base (el clon queda primero, puntajes simétricos, caché), las señales por par (imágenes idénticas, datos faltantes), el modelo entrenado (candidatos ordenados, candidatos por imagen casi idéntica, elegir el Modelo A o el B, explicación legible, versión de scikit-learn incompatible) y la app (guardar casos, construir la interfaz con y sin modelo, descargar desde Hugging Face, pedir contraseña solo si está configurada), las tarjetas de la interfaz, la cola de revisión (no repite pares, cuenta el progreso), el análisis de reseñas (expresiones de copia, menciones de otros juegos) y el filtro de pares casi idénticos. Se corren solos en GitHub Actions en cada push.
 
 ---
 

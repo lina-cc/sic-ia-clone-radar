@@ -7,8 +7,8 @@ App web en Gradio. Esta carpeta tiene el código de la app y la lógica que comp
 | Pestaña | Qué hace | Necesita el modelo |
 |---|---|---|
 | **Etiquetar pares** | La cola de revisión: un par, un clic, el siguiente. Con saltar y deshacer. | Sí |
-| **Buscar un juego** | Candidatos del modelo para un juego, con la **probabilidad de que el par merezca revisión humana**, la explicación de cada señal y las imágenes lado a lado. | Sí |
-| **Comparar dos juegos** | Un par concreto, lado a lado, con la opinión del modelo. | Sí |
+| **Buscar un juego** | Candidatos del modelo para un juego, con la **probabilidad de que el par merezca revisión humana**, la explicación de cada señal y las imágenes lado a lado. Un selector permite ordenar con el Modelo B (por defecto) o el A. | Sí |
+| **Comparar dos juegos** | Un par concreto, lado a lado, con la probabilidad de cada modelo y la explicación del elegido. | Sí |
 | **Línea base (solo palabras)** | TF-IDF: buscar similares, comparar dos juegos y texto nuevo, con las palabras que explican el parecido. | No |
 | **Ayuda** | Cómo usar la app y qué significa cada etiqueta. | No |
 
