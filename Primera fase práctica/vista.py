@@ -234,8 +234,10 @@ def explicacion(consulta: str, candidato: str, prob: float, aportes: pd.DataFram
         + (f'<div class="fp-lado">{lado}</div>' if lado else ""))
 
 
-def progreso(p: dict, anotador: str | None = None) -> str:
+def progreso(p: dict, anotador: str | None = None, hay_modelo_B: bool = False) -> str:
     """Tres contadores de la cola de revisión: los pares de la persona y lo que le falta al equipo.
+
+    Si la app ya usa un Modelo B (`hay_modelo_B`), la nota invita a etiquetar para reentrenarlo.
 
     `p` es el resultado de ColaRevision.progreso, por ejemplo
     {"tuyos": 12, "meta": 30, "positivos": 4, "negativos": 25, "minimo": 10, "listo": False}.
@@ -249,11 +251,16 @@ def progreso(p: dict, anotador: str | None = None) -> str:
     quien = (anotador or "").strip() or "anónimo"   # caja() lo escapa
     faltan_pos = max(p["minimo"] - p["positivos"], 0)
     faltan_neg = max(p["minimo"] - p["negativos"], 0)
-    if p["listo"]:
+    partes = [f"<b>{n}</b> {txt}" for n, txt in ((faltan_pos, "con «Posible copia»"),
+                                                (faltan_neg, "con «Similar» o «No similar»")) if n]
+    if hay_modelo_B:
+        nota = ("El <b>Modelo B</b> ya está entrenado con el lote del equipo. Cada par que etiquetes aquí "
+                "sirve para reentrenarlo y mejorarlo")
+        nota += (". ✅ Ya hay pares suficientes para reentrenarlo; cada par extra mejora la evaluación."
+                 if p["listo"] else ": para la próxima versión faltan " + " y ".join(partes) + ".")
+    elif p["listo"]:
         nota = "✅ Ya hay etiquetas suficientes para entrenar el <b>Modelo B</b>. Cada par extra mejora la evaluación."
     else:
-        partes = [f"<b>{n}</b> {txt}" for n, txt in ((faltan_pos, "con «Posible copia»"),
-                                                    (faltan_neg, "con «Similar» o «No similar»")) if n]
         nota = "Para entrenar el <b>Modelo B</b> al equipo le faltan " + " y ".join(partes) + "."
     return ('<div class="fp-prog">'
             + caja(f"Tus pares ({quien})", p["tuyos"], p["meta"])

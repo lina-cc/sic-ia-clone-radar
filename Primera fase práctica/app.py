@@ -512,7 +512,7 @@ def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path):
     def pantalla(an, estado, mensaje=""):
         """Todo lo que se ve en la pestaña para el estado actual."""
         par = estado.get("par")
-        prog = vista.progreso(cola.progreso(an), an)
+        prog = vista.progreso(cola.progreso(an), an, M.usa_modelo_B)
         ultimos = vista.ultimos(cola.casos(), an)
         if par is None:
             return (prog, vista.vacio("No encontré más pares sin etiquetar por ahora. ¡Gracias!"),
@@ -573,7 +573,7 @@ def agregar_pestana_cola(M, anotador, registrar, ruta_casos: Path):
     gr.HTML(vista.pasos([("Compara", "Mira los dos juegos. Si dudas, ábrelos en Steam."),
                          ("Decide", "¿Un especialista debería mirar este par?"),
                          ("Sigue", "El caso se guarda y aparece el siguiente par.")]))
-    progreso = gr.HTML(vista.progreso(cola.progreso(None)))
+    progreso = gr.HTML(vista.progreso(cola.progreso(None), hay_modelo_B=M.usa_modelo_B))
     par_html = gr.HTML(vista.vacio("Cargando el primer par…"))
     estado = gr.State()
     botones = botones_decision()

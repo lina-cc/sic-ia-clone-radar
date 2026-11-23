@@ -72,6 +72,13 @@ def test_html_del_progreso_y_del_par(paquete_modelo, tmp_path):
     listo = vista.progreso({"tuyos": 30, "meta": 30, "positivos": 12, "negativos": 40, "minimo": 10,
                             "listo": True}, "<b>Ana</b>")
     assert "Ya hay etiquetas suficientes" in listo and "&lt;b&gt;Ana" in listo
+    # Con el Modelo B ya en la app, la nota invita a etiquetar para reentrenarlo
+    con_b = vista.progreso(cola.progreso(None), hay_modelo_B=True)
+    assert "ya está entrenado" in con_b and "reentrenarlo" in con_b and "próxima versión" in con_b
+    assert "le faltan" not in con_b
+    con_b_listo = vista.progreso({"tuyos": 3, "meta": 30, "positivos": 12, "negativos": 40, "minimo": 10,
+                                  "listo": True}, hay_modelo_B=True)
+    assert "suficientes para reentrenarlo" in con_b_listo
     par = cola.siguiente(0)
     html = vista.par_cola(par["a"], par["b"])
     assert html.count('class="fp-juego"') == 2 and "Abrir en Steam" in html
